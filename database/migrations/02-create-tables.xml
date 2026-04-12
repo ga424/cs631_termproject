@@ -1,0 +1,318 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="002-create-tables" author="cs631">
+        <comment>Create rental system tables per requirements</comment>
+
+        <!-- LOCATION table -->
+        <createTable tableName="location">
+            <column name="location_id" type="UUID" defaultValueComputed="uuid_generate_v4()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="street" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="city" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="state" type="VARCHAR(2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="zip" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- CUSTOMER table -->
+        <createTable tableName="customer">
+            <column name="customer_id" type="UUID" defaultValueComputed="uuid_generate_v4()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="first_name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="street" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="city" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="state" type="VARCHAR(2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="zip" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="license_number" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="license_state" type="VARCHAR(2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="credit_card_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="credit_card_number" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="exp_month" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="exp_year" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_customer_license" tableName="customer">
+            <column name="license_number"/>
+        </createIndex>
+
+        <!-- CAR_CLASS table -->
+        <createTable tableName="car_class">
+            <column name="class_id" type="UUID" defaultValueComputed="uuid_generate_v4()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="class_name" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="daily_rate" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="weekly_rate" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- MODEL table -->
+        <createTable tableName="model">
+            <column name="model_name" type="VARCHAR(255)">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="make_name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="model_year" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="class_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_model_class" references="car_class(class_id)"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_model_class_id" tableName="model">
+            <column name="class_id"/>
+        </createIndex>
+
+        <!-- CAR table -->
+        <createTable tableName="car">
+            <column name="vin" type="VARCHAR(50)">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="current_odometer_reading" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="location_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_car_location" references="location(location_id)"/>
+            </column>
+            <column name="model_name" type="VARCHAR(255)">
+                <constraints nullable="false" foreignKeyName="fk_car_model" references="model(model_name)"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_car_location_id" tableName="car">
+            <column name="location_id"/>
+        </createIndex>
+
+        <createIndex indexName="idx_car_model_name" tableName="car">
+            <column name="model_name"/>
+        </createIndex>
+
+        <!-- RESERVATION table -->
+        <createTable tableName="reservation">
+            <column name="reservation_id" type="UUID" defaultValueComputed="uuid_generate_v4()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="customer_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_reservation_customer" references="customer(customer_id)"/>
+            </column>
+            <column name="location_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_reservation_location" references="location(location_id)"/>
+            </column>
+            <column name="class_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_reservation_class" references="car_class(class_id)"/>
+            </column>
+            <column name="pickup_date_time" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="return_date_time_requested" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reservation_status" type="VARCHAR(50)" defaultValue="active">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_reservation_customer_id" tableName="reservation">
+            <column name="customer_id"/>
+        </createIndex>
+
+        <createIndex indexName="idx_reservation_location_id" tableName="reservation">
+            <column name="location_id"/>
+        </createIndex>
+
+        <createIndex indexName="idx_reservation_class_id" tableName="reservation">
+            <column name="class_id"/>
+        </createIndex>
+
+        <createIndex indexName="idx_reservation_status" tableName="reservation">
+            <column name="reservation_status"/>
+        </createIndex>
+
+        <!-- RENTAL_AGREEMENT table -->
+        <createTable tableName="rental_agreement">
+            <column name="contract_no" type="UUID" defaultValueComputed="uuid_generate_v4()">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="reservation_id" type="UUID">
+                <constraints nullable="false" unique="true" foreignKeyName="fk_rental_agreement_reservation" references="reservation(reservation_id)"/>
+            </column>
+            <column name="vin" type="VARCHAR(50)">
+                <constraints nullable="false" foreignKeyName="fk_rental_agreement_car" references="car(vin)"/>
+            </column>
+            <column name="rental_start_date_time" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rental_end_date_time" type="TIMESTAMP"/>
+            <column name="start_odometer_reading" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="end_odometer_reading" type="INT"/>
+            <column name="actual_cost" type="DECIMAL(10,2)"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_rental_agreement_reservation_id" tableName="rental_agreement">
+            <column name="reservation_id"/>
+        </createIndex>
+
+        <createIndex indexName="idx_rental_agreement_vin" tableName="rental_agreement">
+            <column name="vin"/>
+        </createIndex>
+
+        <!-- Create triggers for updated_at -->
+        <sql>
+            CREATE TRIGGER update_location_updated_at
+            BEFORE UPDATE ON location
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at_column();
+        </sql>
+
+        <sql>
+            CREATE TRIGGER update_customer_updated_at
+            BEFORE UPDATE ON customer
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at_column();
+        </sql>
+
+        <sql>
+            CREATE TRIGGER update_car_class_updated_at
+            BEFORE UPDATE ON car_class
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at_column();
+        </sql>
+
+        <sql>
+            CREATE TRIGGER update_model_updated_at
+            BEFORE UPDATE ON model
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at_column();
+        </sql>
+
+        <sql>
+            CREATE TRIGGER update_car_updated_at
+            BEFORE UPDATE ON car
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at_column();
+        </sql>
+
+        <sql>
+            CREATE TRIGGER update_reservation_updated_at
+            BEFORE UPDATE ON reservation
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at_column();
+        </sql>
+
+        <sql>
+            CREATE TRIGGER update_rental_agreement_updated_at
+            BEFORE UPDATE ON rental_agreement
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at_column();
+        </sql>
+
+        <rollback>
+            DROP TRIGGER IF EXISTS update_rental_agreement_updated_at ON rental_agreement;
+            DROP TRIGGER IF EXISTS update_reservation_updated_at ON reservation;
+            DROP TRIGGER IF EXISTS update_car_updated_at ON car;
+            DROP TRIGGER IF EXISTS update_model_updated_at ON model;
+            DROP TRIGGER IF EXISTS update_car_class_updated_at ON car_class;
+            DROP TRIGGER IF EXISTS update_customer_updated_at ON customer;
+            DROP TRIGGER IF EXISTS update_location_updated_at ON location;
+            DROP TABLE IF EXISTS rental_agreement;
+            DROP TABLE IF EXISTS reservation;
+            DROP TABLE IF EXISTS car;
+            DROP TABLE IF EXISTS model;
+            DROP TABLE IF EXISTS car_class;
+            DROP TABLE IF EXISTS customer;
+            DROP TABLE IF EXISTS location;
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

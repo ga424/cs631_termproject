@@ -1,0 +1,74 @@
+services:
+  # Primary relational database for the rental domain.
+  postgres:
+    image: postgres:15-alpine
+    container_name: rental_postgres
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-rental_user}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-rental_password}
+      POSTGRES_DB: ${DATABASE_NAME:-rental_db}
+    ports:
+      # Host 5433 avoids collisions with a local Postgres on 5432.
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-rental_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rental_network
+
+  # One-shot migration runner; exits after applying pending changesets.
+  liquibase:
+    build:
+      context: .
+      dockerfile: Dockerfile.liquibase
+    container_name: rental_liquibase
+    command:
+      # Uses explicit changelog path because Liquibase image defaults can vary.
+      - "--search-path=/liquibase/changelog"
+      - "--changelog-file=db.changelog-master.xml"
+      - "--url=jdbc:postgresql://postgres:5432/${DATABASE_NAME:-rental_db}"
+      - "--username=${DATABASE_USER:-rental_user}"
+      - "--password=${DATABASE_PASSWORD:-rental_password}"
+      - update
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./database/migrations:/liquibase/changelog
+    networks:
+      - rental_network
+
+  # FastAPI service exposing REST endpoints on localhost:8000.
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rental_api
+    environment:
+      DATABASE_URL: postgresql://${DATABASE_USER:-rental_user}:${DATABASE_PASSWORD:-rental_password}@postgres:5432/${DATABASE_NAME:-rental_db}
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      FASTAPI_ENV: ${FASTAPI_ENV:-development}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      liquibase:
+        # API starts only after migrations have completed successfully.
+        condition: service_completed_successfully
+    volumes:
+      - ./backend:/app
+    networks:
+      - rental_network
+
+volumes:
+  postgres_data:
+
+networks:
+  rental_network:
+    driver: bridge
