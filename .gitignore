@@ -33,3 +33,7 @@ MANIFEST
 *~
 .DS_Store
 postgres_data/
+
+# Frontend (React/Vite)
+frontend/node_modules/
+frontend/dist/
