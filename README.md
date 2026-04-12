@@ -42,6 +42,10 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
 │   │   ├── 01-init-schema.xml       # Schema initialization
 │   │   └── 02-create-tables.xml     # Table definitions
 │   └── liquibase/                   # Liquibase configuration
+├── frontend/                        # React + Vite frontend
+│   ├── src/                         # Frontend source code
+│   ├── package.json                 # Frontend dependencies/scripts
+│   └── vite.config.js               # Dev server and proxy config
 ├── docker-compose.yml               # Multi-container orchestration
 ├── Dockerfile.liquibase             # Liquibase container definition
 ├── start.sh                         # Startup helper script
@@ -324,6 +328,31 @@ API_HOST=0.0.0.0
    ```bash
    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
    ```
+
+## React Frontend
+
+A simple React frontend is available in the `frontend` folder.
+
+1. **Install frontend dependencies**
+   ```bash
+   cd frontend
+   npm install
+   ```
+
+2. **Run the frontend dev server**
+   ```bash
+   npm run dev
+   ```
+
+3. **Open in browser**
+   ```
+   http://localhost:5173
+   ```
+
+Notes:
+- Keep the backend running at `http://localhost:8000`.
+- The Vite dev server proxies `/api` and `/health` to the backend.
+- If you need a custom API host, set `VITE_API_BASE_URL`.
 
 ## Troubleshooting
 
