@@ -89,33 +89,28 @@ C4Component
 Shows how the system is deployed in production.
 
 ```mermaid
-C4Deployment
-    title Deployment Diagram - Production Environment
-    
-    Deployment_Node(docker, "Docker Host", "Linux Server with Docker Engine") {
-        Deployment_Node(postgres, "PostgreSQL Container", "PostgreSQL 15") {
-            ContainerDb(db, "Rental Database", "PostgreSQL")
-        }
-        Deployment_Node(api, "API Container", "FastAPI Application") {
-            Container(fastapi, "REST API", "FastAPI Framework")
-        }
-        Deployment_Node(liquibase, "Liquibase Container", "Schema Migration", "One-shot migrator") {
-            Container(migration, "Database Migrations", "Liquibase XML Scripts")
-        }
-    }
-    
-    Deployment_Node(github, "GitHub", "GitHub Cloud") {
-        Deployment_Node(ghcr, "GitHub Container Registry (GHCR)", "Image Storage") {
-            Container(image, "API Docker Image", "ghcr.io/ga424/cs631-termproject-api")
-        }
-    }
-    
-    Deployment_Node(client, "Client Machine", "End User Device") {
-        Container(browser, "Web Browser", "Chrome/Safari/Firefox")
-    }
-    
-    Rel(migration, db, "Applies schema")
-    Rel(fastapi, db, "Reads/Writes")
-    Rel(browser, fastapi, "HTTP Requests")
-    Rel(ghcr, api, "Deploys image")
+flowchart LR
+    subgraph github[GitHub Cloud]
+        repo[Source Repository]
+        ghcr[GitHub Container Registry\nAPI image]
+        repo -->|build and publish| ghcr
+    end
+
+    subgraph host[Docker Host]
+        direction TB
+        subgraph dbnode[PostgreSQL Container]
+            db[(Rental Database)]
+        end
+        subgraph mignode[Liquibase Container]
+            liquibase[Schema migrations]
+        end
+        subgraph apinode[API Container]
+            api[FastAPI REST API]
+        end
+    end
+
+    client[Client Browser] -->|HTTP requests| api
+    ghcr -->|pull image| api
+    liquibase -->|applies schema| db
+    api -->|reads / writes| db
 ```
