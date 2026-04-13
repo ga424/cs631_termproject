@@ -25,6 +25,7 @@ Commands:
     migrate         Run Liquibase migrations only
     seed            Seed database with sample test data
     e2e-dashboard   Seed DB and run frontend dashboard E2E test
+    scan            Run Trivy security scan
     test            Run backend tests with coverage
     help            Show this help message
 
@@ -128,6 +129,15 @@ case "${1:-help}" in
         docker-compose exec -T api python seed_data.py
         echo -e "${GREEN}Running dashboard E2E test...${NC}"
         (cd frontend && npm install && npx playwright install chromium && npm run test:e2e)
+        ;;
+    scan)
+        # Runs a filesystem Trivy scan against the repository contents.
+        echo -e "${GREEN}Running Trivy security scan...${NC}"
+                docker run --rm -v "$PWD":/repo -w /repo aquasec/trivy:0.69.3 fs \
+          --scanners vuln,secret,config \
+          --severity HIGH,CRITICAL \
+          --ignore-unfixed \
+          .
         ;;
     test)
         # Runs pytest inside the API container to match CI behavior.

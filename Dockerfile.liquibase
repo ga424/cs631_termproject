@@ -2,4 +2,6 @@ FROM liquibase/liquibase:4.24
 
 COPY database/migrations /liquibase/changelog
 
+USER liquibase
+
 ENTRYPOINT ["liquibase"]

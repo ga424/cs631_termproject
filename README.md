@@ -234,6 +234,9 @@ curl http://localhost:8000/api/v1
 # Run end-to-end dashboard UI test (clicks Load Dashboard)
 ./start.sh e2e-dashboard
 
+# Run Trivy security scan
+./start.sh scan
+
 # Run backend tests and coverage
 ./start.sh test
 
