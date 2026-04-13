@@ -231,6 +231,9 @@ curl http://localhost:8000/api/v1
 # Seed database with sample test data
 ./start.sh seed
 
+# Run end-to-end dashboard UI test (clicks Load Dashboard)
+./start.sh e2e-dashboard
+
 # Run backend tests and coverage
 ./start.sh test
 
