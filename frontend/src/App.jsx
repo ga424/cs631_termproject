@@ -1,13 +1,7 @@
 import { useMemo, useState } from "react";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
-
-const endpoints = [
-  { key: "health", label: "Health", path: "/health" },
-  { key: "customers", label: "Customers", path: "/api/v1/customers" },
-  { key: "cars", label: "Cars", path: "/api/v1/cars" },
-  { key: "reservations", label: "Reservations", path: "/api/v1/reservations" }
-];
+const DASHBOARD_PATH = "/api/v1/dashboard/overview";
 
 async function fetchJson(path) {
   const response = await fetch(`${API_BASE}${path}`);
@@ -17,39 +11,48 @@ async function fetchJson(path) {
   return response.json();
 }
 
+function formatDateTime(value) {
+  if (!value) {
+    return "-";
+  }
+
+  return new Date(value).toLocaleString();
+}
+
+function formatPercent(value) {
+  return `${Number(value || 0).toFixed(1)}%`;
+}
+
 export default function App() {
-  const [data, setData] = useState({
-    health: null,
-    customers: [],
-    cars: [],
-    reservations: []
-  });
+  const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const stats = useMemo(
-    () => [
-      { label: "Customers", value: data.customers.length },
-      { label: "Cars", value: data.cars.length },
-      { label: "Reservations", value: data.reservations.length },
-      {
-        label: "API Status",
-        value: data.health?.status ? data.health.status.toUpperCase() : "UNKNOWN"
-      }
-    ],
-    [data]
-  );
+  const stats = useMemo(() => {
+    if (!dashboard) {
+      return [];
+    }
+
+    const { totals } = dashboard;
+    const utilization =
+      totals.total_cars > 0 ? (totals.rented_cars / totals.total_cars) * 100 : 0;
+
+    return [
+      { label: "Total Fleet", value: totals.total_cars },
+      { label: "Available", value: totals.available_cars },
+      { label: "Rented", value: totals.rented_cars },
+      { label: "Reserved Requests", value: totals.reserved_requests },
+      { label: "Utilization", value: formatPercent(utilization) }
+    ];
+  }, [dashboard]);
 
   async function loadData() {
     setLoading(true);
     setError("");
 
     try {
-      const [health, customers, cars, reservations] = await Promise.all(
-        endpoints.map((endpoint) => fetchJson(endpoint.path))
-      );
-
-      setData({ health, customers, cars, reservations });
+      const payload = await fetchJson(DASHBOARD_PATH);
+      setDashboard(payload);
     } catch (err) {
       setError(err.message || "Could not load data from API.");
     } finally {
@@ -60,14 +63,19 @@ export default function App() {
   return (
     <div className="page">
       <header className="hero">
-        <h1>Rental Car Dashboard</h1>
-        <p>Simple React frontend for your FastAPI rental system.</p>
+        <div>
+          <p className="eyebrow">Operations Center</p>
+          <h1>Rental Fleet Dashboard</h1>
+          <p>Track where cars are, what is currently rented, and which pickups are coming next.</p>
+        </div>
         <button onClick={loadData} disabled={loading}>
-          {loading ? "Loading..." : "Load Data"}
+          {loading ? "Refreshing..." : dashboard ? "Refresh Dashboard" : "Load Dashboard"}
         </button>
       </header>
 
       {error ? <div className="alert">{error}</div> : null}
+
+      {!dashboard && !loading ? <div className="empty">Load the dashboard to view live fleet metrics.</div> : null}
 
       <section className="stats-grid">
         {stats.map((stat) => (
@@ -79,39 +87,116 @@ export default function App() {
       </section>
 
       <section className="panel-grid">
+        <article className="panel panel-wide">
+          <div className="panel-title-row">
+            <h3>Availability by Location</h3>
+            <span>{dashboard?.locations.length || 0} locations</span>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Location</th>
+                  <th>Total</th>
+                  <th>Available</th>
+                  <th>Rented</th>
+                  <th>Reserved</th>
+                  <th>Utilization</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(dashboard?.locations || []).map((location) => (
+                  <tr key={location.location_id}>
+                    <td>{location.location_name}</td>
+                    <td>{location.total_cars}</td>
+                    <td>{location.available_cars}</td>
+                    <td>{location.rented_cars}</td>
+                    <td>{location.reserved_requests}</td>
+                    <td>{formatPercent(location.utilization_percent)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
         <article className="panel">
-          <h3>Customers</h3>
-          <ul>
-            {data.customers.slice(0, 6).map((customer) => (
-              <li key={customer.customer_id}>
-                {customer.first_name} {customer.last_name}
+          <div className="panel-title-row">
+            <h3>Active Rentals</h3>
+            <span>{dashboard?.active_rentals.length || 0}</span>
+          </div>
+          <ul className="rich-list">
+            {(dashboard?.active_rentals || []).slice(0, 8).map((rental) => (
+              <li key={rental.contract_no}>
+                <div>
+                  <strong>{rental.vin}</strong>
+                  <p>{rental.location_name}</p>
+                </div>
+                <div className={rental.is_overdue ? "pill danger" : "pill"}>
+                  {rental.is_overdue ? "Overdue" : "On track"}
+                </div>
               </li>
             ))}
           </ul>
         </article>
 
         <article className="panel">
-          <h3>Cars</h3>
-          <ul>
-            {data.cars.slice(0, 6).map((car) => (
-              <li key={car.vin}>
-                {car.vin} ({car.model_name})
+          <div className="panel-title-row">
+            <h3>Upcoming Pickups (24h)</h3>
+            <span>{dashboard?.upcoming_pickups.length || 0}</span>
+          </div>
+          <ul className="rich-list">
+            {(dashboard?.upcoming_pickups || []).slice(0, 8).map((pickup) => (
+              <li key={pickup.reservation_id}>
+                <div>
+                  <strong>{pickup.location_name}</strong>
+                  <p>{formatDateTime(pickup.pickup_date_time)}</p>
+                </div>
+                <div className="pill">{pickup.reservation_status}</div>
               </li>
             ))}
           </ul>
         </article>
 
-        <article className="panel">
-          <h3>Reservations</h3>
-          <ul>
-            {data.reservations.slice(0, 6).map((reservation) => (
-              <li key={reservation.reservation_id}>
-                {reservation.reservation_status} - {reservation.reservation_id.slice(0, 8)}
-              </li>
-            ))}
-          </ul>
+        <article className="panel panel-wide">
+          <div className="panel-title-row">
+            <h3>Fleet Status</h3>
+            <span>{dashboard?.fleet.length || 0} vehicles</span>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>VIN</th>
+                  <th>Model</th>
+                  <th>Location</th>
+                  <th>Odometer</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(dashboard?.fleet || []).slice(0, 30).map((car) => (
+                  <tr key={car.vin}>
+                    <td>{car.vin}</td>
+                    <td>{car.model_name}</td>
+                    <td>{car.location_name}</td>
+                    <td>{car.current_odometer_reading.toLocaleString()}</td>
+                    <td>
+                      <span className={car.status === "RENTED" ? "pill danger" : "pill"}>
+                        {car.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </article>
       </section>
+
+      {dashboard ? (
+        <footer className="footer-note">Last refresh: {formatDateTime(dashboard.generated_at)}</footer>
+      ) : null}
     </div>
   );
 }
