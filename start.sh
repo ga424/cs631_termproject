@@ -123,7 +123,7 @@ case "${1:-help}" in
     e2e-dashboard)
         # Validates the UI click flow using real seeded backend data.
         echo -e "${GREEN}Ensuring services are up...${NC}"
-        docker-compose up -d
+        docker-compose up -d --build
         echo -e "${GREEN}Seeding database with sample data...${NC}"
         docker-compose exec -T api python seed_data.py
         echo -e "${GREEN}Running dashboard E2E test...${NC}"
