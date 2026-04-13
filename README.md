@@ -139,6 +139,11 @@ GET http://localhost:8000/api/v1/customers
 GET http://localhost:8000/api/v1/cars
 ```
 
+#### Fleet Operations Dashboard Summary
+```bash
+GET http://localhost:8000/api/v1/dashboard/overview
+```
+
 #### Create a New Location
 ```bash
 POST http://localhost:8000/api/v1/locations
@@ -163,7 +168,7 @@ Content-Type: application/json
   "class_id": "{car_class_uuid}",
   "pickup_date_time": "2026-04-15T10:00:00",
   "return_date_time_requested": "2026-04-18T10:00:00",
-  "reservation_status": "confirmed"
+   "reservation_status": "ACTIVE"
 }
 ```
 
@@ -189,6 +194,9 @@ curl http://localhost:8000/api/v1/customers
 # List all cars
 curl http://localhost:8000/api/v1/cars
 
+# View dashboard overview metrics
+curl http://localhost:8000/api/v1/dashboard/overview
+
 # Get health status
 curl http://localhost:8000/health
 
@@ -209,6 +217,7 @@ curl http://localhost:8000/api/v1
 ./start.sh logs
 ./start.sh logs-api
 ./start.sh logs-db
+./start.sh logs-frontend
 
 # Rebuild images
 ./start.sh rebuild
@@ -244,6 +253,7 @@ http://localhost:8000/api/v1
 - `GET|POST|PUT|DELETE /cars`
 - `GET|POST|PUT|DELETE /reservations`
 - `GET|POST|PUT|DELETE /rental-agreements`
+- `GET /dashboard/overview`
 
 ## CI/CD And Coverage
 
