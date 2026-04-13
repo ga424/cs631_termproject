@@ -12,10 +12,22 @@ def test_dashboard_overview_returns_expected_top_level_shape():
     payload = response.json()
     assert "generated_at" in payload
     assert "totals" in payload
+    assert "rates" in payload
     assert "locations" in payload
     assert "fleet" in payload
     assert "active_rentals" in payload
     assert "upcoming_pickups" in payload
+
+
+def test_dashboard_rates_include_seeded_classes():
+    client = TestClient(app)
+
+    payload = client.get("/api/v1/dashboard/overview").json()
+    rates = {rate["class_name"]: rate for rate in payload["rates"]}
+
+    assert rates["Economy"]["daily_rate"] == 35.0
+    assert rates["Economy"]["weekly_rate"] == 200.0
+    assert rates["SUV"]["vehicle_count"] == 4
 
 
 def test_dashboard_totals_are_internally_consistent():

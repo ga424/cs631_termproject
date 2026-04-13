@@ -264,6 +264,15 @@ class DashboardTotals(BaseModel):
     reserved_requests: int
 
 
+class DashboardRateSummary(BaseModel):
+    class_id: UUID
+    class_name: str
+    daily_rate: float
+    weekly_rate: float
+    model_count: int
+    vehicle_count: int
+
+
 class DashboardLocationSummary(BaseModel):
     location_id: UUID
     location_name: str
@@ -306,6 +315,7 @@ class DashboardUpcomingReservation(BaseModel):
 class DashboardOverview(BaseModel):
     generated_at: datetime
     totals: DashboardTotals
+    rates: list[DashboardRateSummary]
     locations: list[DashboardLocationSummary]
     fleet: list[DashboardFleetItem]
     active_rentals: list[DashboardActiveRental]

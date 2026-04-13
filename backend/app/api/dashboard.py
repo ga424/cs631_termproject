@@ -6,12 +6,13 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.session import get_db
-from app.models.models import Car, Location, RentalAgreement, Reservation
+from app.models.models import Car, CarClass, Location, Model, RentalAgreement, Reservation
 from app.schemas import (
     DashboardActiveRental,
     DashboardFleetItem,
     DashboardLocationSummary,
     DashboardOverview,
+    DashboardRateSummary,
     DashboardTotals,
     DashboardUpcomingReservation,
 )
@@ -37,7 +38,12 @@ def get_dashboard_overview(db: Session = Depends(get_db)):
     next_24_hours = now + timedelta(hours=24)
 
     locations = db.query(Location).all()
-    cars = db.query(Car).options(joinedload(Car.location)).all()
+    cars = db.query(Car).options(joinedload(Car.location), joinedload(Car.model)).all()
+    car_classes = (
+        db.query(CarClass)
+        .options(joinedload(CarClass.models).joinedload(Model.cars))
+        .all()
+    )
 
     active_rentals = (
         db.query(RentalAgreement)
@@ -160,11 +166,28 @@ def get_dashboard_overview(db: Session = Depends(get_db)):
         reserved_requests=sum(reserved_requests_by_location.values()),
     )
 
+    rate_summaries: list[DashboardRateSummary] = []
+    for car_class in car_classes:
+        vehicle_count = sum(len(model.cars) for model in car_class.models)
+        rate_summaries.append(
+            DashboardRateSummary(
+                class_id=car_class.class_id,
+                class_name=car_class.class_name,
+                daily_rate=float(car_class.daily_rate),
+                weekly_rate=float(car_class.weekly_rate),
+                model_count=len(car_class.models),
+                vehicle_count=vehicle_count,
+            )
+        )
+
+    rate_summaries.sort(key=lambda item: item.class_name)
+
     upcoming_pickups.sort(key=lambda item: item.pickup_date_time)
 
     return DashboardOverview(
         generated_at=now,
         totals=totals,
+        rates=rate_summaries,
         locations=location_summaries,
         fleet=fleet_items,
         active_rentals=active_rental_items,

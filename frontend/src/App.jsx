@@ -23,6 +23,14 @@ function formatPercent(value) {
   return `${Number(value || 0).toFixed(1)}%`;
 }
 
+function formatCurrency(value) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0
+  }).format(Number(value || 0));
+}
+
 export default function App() {
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -113,6 +121,37 @@ export default function App() {
                     <td>{location.rented_cars}</td>
                     <td>{location.reserved_requests}</td>
                     <td>{formatPercent(location.utilization_percent)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article className="panel panel-wide">
+          <div className="panel-title-row">
+            <h3>Class Rates</h3>
+            <span>{dashboard?.rates.length || 0} classes</span>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Class</th>
+                  <th>Daily Rate</th>
+                  <th>Weekly Rate</th>
+                  <th>Models</th>
+                  <th>Vehicles</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(dashboard?.rates || []).map((rate) => (
+                  <tr key={rate.class_id}>
+                    <td>{rate.class_name}</td>
+                    <td>{formatCurrency(rate.daily_rate)}</td>
+                    <td>{formatCurrency(rate.weekly_rate)}</td>
+                    <td>{rate.model_count}</td>
+                    <td>{rate.vehicle_count}</td>
                   </tr>
                 ))}
               </tbody>
