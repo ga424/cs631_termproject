@@ -87,7 +87,7 @@ jobs:
             -v "${{ github.workspace }}:/repo" \
             -w /repo \
             aquasec/trivy:0.69.3 fs \
-            --scanners vuln,secret,config \
+            --scanners vuln,secret,misconfig \
             --severity HIGH,CRITICAL \
             --ignore-unfixed \
             .
