@@ -1,7 +1,14 @@
+import asyncio
+import runpy
+import sys
+from types import SimpleNamespace
+
+import pytest
 from fastapi.testclient import TestClient
 
 from app.db.session import get_db
 from app.main import app
+import app.main as main_module
 
 
 class HealthyDB:
@@ -79,3 +86,44 @@ def test_docs_endpoint_available():
     response = client.get("/docs")
 
     assert response.status_code == 200
+
+
+def test_startup_logs_application_metadata(monkeypatch):
+    captured = {}
+
+    def fake_info(message, *args):
+        captured["message"] = message
+        captured["args"] = args
+
+    monkeypatch.setattr(main_module.logger, "info", fake_info)
+
+    asyncio.run(main_module.on_startup())
+
+    assert captured["message"] == "Application started: name=%s version=%s env=%s"
+    assert len(captured["args"]) == 3
+
+
+def test_middleware_reraises_unhandled_exception():
+    request = SimpleNamespace(method="GET", url=SimpleNamespace(path="/boom"))
+
+    async def failing_call_next(_request):
+        raise RuntimeError("boom")
+
+    with pytest.raises(RuntimeError, match="boom"):
+        asyncio.run(main_module.log_requests(request, failing_call_next))
+
+
+def test_main_block_invokes_uvicorn_run(monkeypatch):
+    captured = {}
+
+    def fake_run(app_obj, host, port):
+        captured["app"] = app_obj
+        captured["host"] = host
+        captured["port"] = port
+
+    monkeypatch.setitem(sys.modules, "uvicorn", SimpleNamespace(run=fake_run))
+
+    runpy.run_module("app.main", run_name="__main__")
+
+    assert captured["host"] == main_module.settings.api_host
+    assert captured["port"] == main_module.settings.api_port

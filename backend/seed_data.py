@@ -168,7 +168,7 @@ def seed_database():
                 class_id=car_classes[0].class_id,
                 pickup_date_time=now + timedelta(days=1),
                 return_date_time_requested=now + timedelta(days=4),
-                reservation_status="confirmed"
+                reservation_status="COMPLETED"
             ),
             Reservation(
                 customer_id=customers[1].customer_id,
@@ -176,7 +176,7 @@ def seed_database():
                 class_id=car_classes[2].class_id,
                 pickup_date_time=now + timedelta(days=2),
                 return_date_time_requested=now + timedelta(days=9),
-                reservation_status="confirmed"
+                reservation_status="COMPLETED"
             ),
             Reservation(
                 customer_id=customers[2].customer_id,
@@ -184,7 +184,7 @@ def seed_database():
                 class_id=car_classes[4].class_id,
                 pickup_date_time=now + timedelta(days=3),
                 return_date_time_requested=now + timedelta(days=6),
-                reservation_status="active"
+                reservation_status="ACTIVE"
             ),
             Reservation(
                 customer_id=customers[3].customer_id,
@@ -192,7 +192,7 @@ def seed_database():
                 class_id=car_classes[1].class_id,
                 pickup_date_time=now + timedelta(days=5),
                 return_date_time_requested=now + timedelta(days=8),
-                reservation_status="pending"
+                reservation_status="CANCELED"
             ),
             Reservation(
                 customer_id=customers[4].customer_id,
@@ -200,7 +200,7 @@ def seed_database():
                 class_id=car_classes[5].class_id,
                 pickup_date_time=now + timedelta(days=7),
                 return_date_time_requested=now + timedelta(days=14),
-                reservation_status="confirmed"
+                reservation_status="NO_SHOW"
             ),
         ]
         session.add_all(reservations)
