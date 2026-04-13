@@ -92,6 +92,7 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
    - Swagger UI: `http://localhost:8000/docs`
    - ReDoc: `http://localhost:8000/redoc`
    - Health Check: `http://localhost:8000/health`
+   - Frontend Dashboard: `http://localhost:5173`
 
 6. **Seed Sample Data** (optional, for testing)
    ```bash
@@ -353,6 +354,14 @@ Notes:
 - Keep the backend running at `http://localhost:8000`.
 - The Vite dev server proxies `/api` and `/health` to the backend.
 - If you need a custom API host, set `VITE_API_BASE_URL`.
+
+## User Journey Mapping
+
+To support CS631 Phase I/II/III traceability from requirements to implementation and tests, see:
+
+- `docs/USER_JOURNEYS.md`
+
+This captures key workflows (reservation, pickup/rental creation, return/closeout, cancellation/no-show, and fleet administration) and maps each to entities and API endpoints.
 
 ## Troubleshooting
 

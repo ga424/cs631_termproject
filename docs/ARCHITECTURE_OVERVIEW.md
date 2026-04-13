@@ -91,6 +91,23 @@ Comprehensive Entity Relationship Diagram (ERD) showing the complete database sc
 
 ---
 
+### 3. [USER_JOURNEYS.md](USER_JOURNEYS.md) - Requirements-To-Workflow Mapping
+
+User journey views that connect course requirements to concrete workflows and API calls:
+
+- Reservation creation
+- Reservation-to-rental conversion at pickup
+- Rental return and closeout
+- Cancellation / no-show flows
+- Fleet and pricing administration flows
+
+These journeys are intended to support:
+- Phase I traceability from business rules to entities/relationships
+- Phase II implementation validation against API and schema design
+- Phase III testing and presentation scenario planning
+
+---
+
 ## How to Use These Diagrams
 
 ### For System Understanding
