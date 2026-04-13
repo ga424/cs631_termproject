@@ -66,6 +66,23 @@ services:
     networks:
       - rental_network
 
+  # React + Vite frontend served on localhost:5173.
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: rental_frontend
+    environment:
+      # Inside compose, Vite proxy should target the API service name.
+      VITE_PROXY_TARGET: http://api:8000
+    ports:
+      - "5173:5173"
+    depends_on:
+      api:
+        condition: service_started
+    networks:
+      - rental_network
+
 volumes:
   postgres_data:
 

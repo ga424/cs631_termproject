@@ -16,6 +16,7 @@ Commands:
     down            Stop all services
     logs            View logs
     logs-api        View API logs
+    logs-frontend   View frontend logs
     logs-db         View database logs
     build           Build Docker images
     rebuild         Rebuild Docker images from scratch
@@ -68,6 +69,7 @@ case "${1:-help}" in
         echo ""
         echo -e "${GREEN}API will be available at: http://localhost:8000${NC}"
         echo -e "${GREEN}API Docs at: http://localhost:8000/docs${NC}"
+        echo -e "${GREEN}Frontend will be available at: http://localhost:5173${NC}"
         ;;
     down)
         echo -e "${GREEN}Stopping all services...${NC}"
@@ -79,6 +81,9 @@ case "${1:-help}" in
         ;;
     logs-api)
         docker-compose logs -f api
+        ;;
+    logs-frontend)
+        docker-compose logs -f frontend
         ;;
     logs-db)
         docker-compose logs -f postgres
