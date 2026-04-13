@@ -39,3 +39,4 @@ frontend/node_modules/
 frontend/dist/
 backend/coverage.xml
 frontend/test-results/.last-run.json
+backend/coverage.xml

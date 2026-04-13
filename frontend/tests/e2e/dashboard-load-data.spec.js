@@ -5,6 +5,10 @@ test("clicking Load Dashboard renders seeded fleet data", async ({ page }) => {
 
   await page.getByRole("button", { name: /load dashboard/i }).click();
 
+  await expect(page.getByRole("region", { name: "Pricing snapshot" })).toBeVisible();
+  await expect(page.getByText("Lowest Daily")).toBeVisible();
+  await expect(page.getByText("$35")).toBeVisible();
+
   await expect(page.getByText("Total Fleet")).toBeVisible();
   await expect(page.getByText("10").first()).toBeVisible();
 

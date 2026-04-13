@@ -47,7 +47,8 @@ async def on_startup():
 async def log_requests(request, call_next):
     """Log each incoming request with status code, duration, and service context."""
     start_time = time.perf_counter()
-    client_host = request.client.host if request.client else "unknown"
+    client = getattr(request, "client", None)
+    client_host = client.host if client else "unknown"
     path = request.url.path
     method = request.method
     

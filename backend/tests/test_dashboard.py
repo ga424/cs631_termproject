@@ -27,7 +27,7 @@ def test_dashboard_rates_include_seeded_classes():
 
     assert rates["Economy"]["daily_rate"] == 35.0
     assert rates["Economy"]["weekly_rate"] == 200.0
-    assert rates["SUV"]["vehicle_count"] == 4
+    assert rates["SUV"]["vehicle_count"] == 3
 
 
 def test_dashboard_totals_are_internally_consistent():

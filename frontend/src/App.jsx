@@ -54,6 +54,24 @@ export default function App() {
     ];
   }, [dashboard]);
 
+  const rateStats = useMemo(() => {
+    if (!dashboard?.rates?.length) {
+      return [];
+    }
+
+    const dailyRates = dashboard.rates.map((rate) => Number(rate.daily_rate));
+    const weeklyRates = dashboard.rates.map((rate) => Number(rate.weekly_rate));
+    const averageDaily = dailyRates.reduce((sum, rate) => sum + rate, 0) / dailyRates.length;
+    const averageWeekly = weeklyRates.reduce((sum, rate) => sum + rate, 0) / weeklyRates.length;
+
+    return [
+      { label: "Lowest Daily", value: formatCurrency(Math.min(...dailyRates)) },
+      { label: "Highest Daily", value: formatCurrency(Math.max(...dailyRates)) },
+      { label: "Average Daily", value: formatCurrency(averageDaily) },
+      { label: "Average Weekly", value: formatCurrency(averageWeekly) }
+    ];
+  }, [dashboard]);
+
   async function loadData() {
     setLoading(true);
     setError("");
@@ -84,6 +102,17 @@ export default function App() {
       {error ? <div className="alert">{error}</div> : null}
 
       {!dashboard && !loading ? <div className="empty">Load the dashboard to view live fleet metrics.</div> : null}
+
+      {dashboard ? (
+        <section className="stats-grid" aria-label="Pricing snapshot">
+          {rateStats.map((stat) => (
+            <article key={stat.label} className="stat-card">
+              <h2>{stat.value}</h2>
+              <p>{stat.label}</p>
+            </article>
+          ))}
+        </section>
+      ) : null}
 
       <section className="stats-grid">
         {stats.map((stat) => (
