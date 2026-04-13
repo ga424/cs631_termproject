@@ -82,15 +82,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Trivy filesystem scan
-        run: |
-          docker run --rm \
-            -v "${{ github.workspace }}:/repo" \
-            -w /repo \
-            aquasec/trivy:0.69.3 fs \
-            --scanners vuln,secret,misconfig \
-            --severity HIGH,CRITICAL \
-            --ignore-unfixed \
-            .
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
 
   # Publishes production-consumable API image only on main-branch pushes.
   publish-api-image:

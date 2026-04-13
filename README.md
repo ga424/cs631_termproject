@@ -1,5 +1,7 @@
 # CS 631 Term Project - Rental Car Management System
 
+[![CI-CD](https://github.com/ga424/cs631_termproject/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/ga424/cs631_termproject/actions/workflows/ci-cd.yml)
+
 A containerized rental car management system built with FastAPI, PostgreSQL, and Liquibase for database migrations.
 
 ## Architecture
