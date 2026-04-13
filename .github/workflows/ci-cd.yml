@@ -71,6 +71,27 @@ jobs:
           push: false
           tags: cs631-termproject-liquibase:ci
 
+  # Scans the repository for vulnerabilities, exposed secrets, and misconfigurations.
+  security-scan:
+    name: Trivy Security Scan
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy filesystem scan
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/repo" \
+            -w /repo \
+            aquasec/trivy:0.69.3 fs \
+            --scanners vuln,secret,config \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            .
+
   # Publishes production-consumable API image only on main-branch pushes.
   publish-api-image:
     name: Publish API Image
