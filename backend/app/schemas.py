@@ -248,3 +248,57 @@ class RentalAgreement(RentalAgreementBase):
 
     class Config:
         from_attributes = True
+
+
+# Dashboard schemas
+class DashboardTotals(BaseModel):
+    total_cars: int
+    available_cars: int
+    rented_cars: int
+    reserved_requests: int
+
+
+class DashboardLocationSummary(BaseModel):
+    location_id: UUID
+    location_name: str
+    total_cars: int
+    available_cars: int
+    rented_cars: int
+    reserved_requests: int
+    utilization_percent: float
+
+
+class DashboardFleetItem(BaseModel):
+    vin: str
+    model_name: str
+    location_id: UUID
+    location_name: str
+    current_odometer_reading: int
+    status: Literal["AVAILABLE", "RENTED"]
+    active_contract_no: Optional[UUID] = None
+
+
+class DashboardActiveRental(BaseModel):
+    contract_no: UUID
+    vin: str
+    location_name: str
+    rental_start_date_time: datetime
+    return_date_time_requested: datetime
+    is_overdue: bool
+
+
+class DashboardUpcomingReservation(BaseModel):
+    reservation_id: UUID
+    location_name: str
+    pickup_date_time: datetime
+    return_date_time_requested: datetime
+    reservation_status: str
+
+
+class DashboardOverview(BaseModel):
+    generated_at: datetime
+    totals: DashboardTotals
+    locations: list[DashboardLocationSummary]
+    fleet: list[DashboardFleetItem]
+    active_rentals: list[DashboardActiveRental]
+    upcoming_pickups: list[DashboardUpcomingReservation]
