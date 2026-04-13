@@ -2,6 +2,62 @@
 
 This document maps user workflows directly to the official CS631 RentACar requirements and to the implemented API resources.
 
+## Journey Views (Diagrams)
+
+### End-To-End Journey Flow
+
+```mermaid
+flowchart TD
+	A[Customer contacts branch] --> B{Has reservation?}
+	B -->|Yes| C[Retrieve reservation]
+	B -->|No walk-in| D[Create reservation first]
+	D --> C
+	C --> E[Assign specific VIN]
+	E --> F[Create rental agreement at pickup]
+	F --> G[Vehicle in use]
+	G --> H{Returned?}
+	H -->|Yes| I[Capture return time and end odometer]
+	I --> J[Compute actual cost by class rates]
+	J --> K[Charge credit card]
+	H -->|No show/cancel path| L[Update reservation status]
+	L --> M[End without rental agreement]
+```
+
+### Phone Reservation Sequence
+
+```mermaid
+sequenceDiagram
+	actor Customer
+	participant Rep as Service Representative
+	participant API as Rental API
+	participant DB as Database
+
+	Customer->>Rep: Request reservation by phone
+	Rep->>API: Create/lookup customer
+	API->>DB: Insert/select customer
+	DB-->>API: Customer record
+	Rep->>API: Submit reservation details
+	API->>DB: Insert reservation (ACTIVE)
+	DB-->>API: Reservation ID
+	API-->>Rep: Reservation confirmation + rates
+	Rep-->>Customer: Confirm reservation and pricing
+```
+
+### Reservation And Rental Lifecycle States
+
+```mermaid
+stateDiagram-v2
+	[*] --> ACTIVE: Reservation created
+	ACTIVE --> COMPLETED: Converted to rental agreement
+	ACTIVE --> CANCELED: Customer/branch cancels
+	ACTIVE --> NO_SHOW: Customer does not arrive
+
+	state COMPLETED {
+		[*] --> RENTAL_OPEN
+		RENTAL_OPEN --> RENTAL_CLOSED: Vehicle returned and billed
+	}
+```
+
 ## Journey 1: Reservation By Phone (Pre-Arrival)
 
 ### Requirement Mapping
