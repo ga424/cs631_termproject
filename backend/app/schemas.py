@@ -3,7 +3,7 @@
 from typing import Optional, Literal
 from datetime import datetime
 from uuid import UUID
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator, field_validator
 
 
 # Location schemas
@@ -190,8 +190,23 @@ class ReservationUpdate(BaseModel):
 
 class Reservation(ReservationBase):
     reservation_id: UUID
+    reservation_status: str
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("reservation_status", mode="before")
+    @classmethod
+    def normalize_legacy_statuses(cls, value: str) -> str:
+        if not isinstance(value, str):
+            return value
+
+        status = value.strip().upper()
+        # Backward compatibility with older seeded values.
+        if status == "CONFIRMED":
+            return "COMPLETED"
+        if status == "PENDING":
+            return "ACTIVE"
+        return status
 
     class Config:
         from_attributes = True

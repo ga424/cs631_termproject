@@ -11,6 +11,7 @@ from app.schemas import (
     CarCreate,
     CustomerCreate,
     ReservationCreate,
+    Reservation,
     RentalAgreement,
 )
 
@@ -179,3 +180,25 @@ def test_api_rejects_invalid_rental_start_odometer():
     }
     response = client.post("/api/v1/rental-agreements", json=payload)
     assert response.status_code == 422
+
+
+def test_reservation_response_model_normalizes_legacy_status_values():
+    now = datetime.utcnow()
+    base = {
+        "reservation_id": uuid4(),
+        "customer_id": uuid4(),
+        "location_id": uuid4(),
+        "class_id": uuid4(),
+        "pickup_date_time": now,
+        "return_date_time_requested": now + timedelta(hours=2),
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    confirmed = Reservation(**{**base, "reservation_status": "confirmed"})
+    pending = Reservation(**{**base, "reservation_status": "pending"})
+    active = Reservation(**{**base, "reservation_status": "active"})
+
+    assert confirmed.reservation_status == "COMPLETED"
+    assert pending.reservation_status == "ACTIVE"
+    assert active.reservation_status == "ACTIVE"

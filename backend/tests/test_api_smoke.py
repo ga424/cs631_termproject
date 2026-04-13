@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
-from app.db.session import get_db
+from app.db.session import get_db 
 from app.main import app
 import app.main as main_module
 
