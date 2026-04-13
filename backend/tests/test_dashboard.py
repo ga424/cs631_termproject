@@ -1,0 +1,54 @@
+from fastapi.testclient import TestClient
+
+from app.main import app
+
+
+def test_dashboard_overview_returns_expected_top_level_shape():
+    client = TestClient(app)
+
+    response = client.get("/api/v1/dashboard/overview")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "generated_at" in payload
+    assert "totals" in payload
+    assert "locations" in payload
+    assert "fleet" in payload
+    assert "active_rentals" in payload
+    assert "upcoming_pickups" in payload
+
+
+def test_dashboard_totals_are_internally_consistent():
+    client = TestClient(app)
+
+    payload = client.get("/api/v1/dashboard/overview").json()
+    totals = payload["totals"]
+
+    assert totals["total_cars"] == totals["available_cars"] + totals["rented_cars"]
+
+    location_total_cars = sum(location["total_cars"] for location in payload["locations"])
+    location_available = sum(location["available_cars"] for location in payload["locations"])
+    location_rented = sum(location["rented_cars"] for location in payload["locations"])
+
+    assert totals["total_cars"] == location_total_cars
+    assert totals["available_cars"] == location_available
+    assert totals["rented_cars"] == location_rented
+
+
+def test_dashboard_fleet_status_and_active_rentals_align():
+    client = TestClient(app)
+
+    payload = client.get("/api/v1/dashboard/overview").json()
+    fleet = payload["fleet"]
+    active_rentals = payload["active_rentals"]
+
+    rented_fleet_items = [item for item in fleet if item["status"] == "RENTED"]
+    available_fleet_items = [item for item in fleet if item["status"] == "AVAILABLE"]
+
+    assert all(item["active_contract_no"] for item in rented_fleet_items)
+    assert all(item["active_contract_no"] is None for item in available_fleet_items)
+
+    rented_vins = {item["vin"] for item in rented_fleet_items}
+    active_rental_vins = {rental["vin"] for rental in active_rentals}
+
+    assert active_rental_vins.issubset(rented_vins)
