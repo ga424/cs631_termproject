@@ -4,14 +4,14 @@
 
 ```mermaid
 erDiagram
-    LOCATION ||--o{ CAR : "has"
-    LOCATION ||--o{ RESERVATION : "has"
     CUSTOMER ||--o{ RESERVATION : "makes"
-    CAR_CLASS ||--o{ MODEL : "classifies"
-    CAR_CLASS ||--o{ RESERVATION : "reserved_for"
-    MODEL ||--o{ CAR : "defines"
-    RESERVATION ||--|| RENTAL_AGREEMENT : "creates"
-    CAR ||--o{ RENTAL_AGREEMENT : "used_in"
+    RESERVATION ||--|| RENTAL_AGREEMENT : "results_in"
+    RENTAL_AGREEMENT }o--|| CAR : "rents"
+    MODEL }o--|| CAR_CLASS : "registered_as"
+    CAR }o--|| MODEL : "belongs_to"
+    CAR }o--|| LOCATION : "belongs_to"
+    RESERVATION }o--|| LOCATION : "pickup_at"
+    RESERVATION }o--|| CAR_CLASS : "reserves"
 
     LOCATION {
         uuid location_id PK

@@ -45,20 +45,42 @@ async def on_startup():
 
 @app.middleware("http")
 async def log_requests(request, call_next):
-    """Log each incoming request with status code and duration."""
+    """Log each incoming request with status code, duration, and service context."""
     start_time = time.perf_counter()
+    client_host = request.client.host if request.client else "unknown"
+    path = request.url.path
+    method = request.method
+    
+    # Extract service name from path (e.g., /api/v1/customers -> customers)
+    path_parts = path.split('/')
+    service = path_parts[-1] if len(path_parts) > 1 else "root"
+    
     try:
         response = await call_next(request)
-    except Exception:
-        logger.exception("Unhandled error while processing %s %s", request.method, request.url.path)
+        status_code = response.status_code
+    except Exception as e:
+        logger.exception(
+            "[%s] %s %s %s -> ERROR (unhandled exception)",
+            client_host,
+            method,
+            path,
+            service,
+        )
         raise
 
     duration_ms = (time.perf_counter() - start_time) * 1000
-    logger.info(
-        "%s %s -> %s (%.2f ms)",
-        request.method,
-        request.url.path,
-        response.status_code,
+    
+    # Log with more context
+    log_level = "info" if 200 <= status_code < 400 else "warning" if 400 <= status_code < 500 else "error"
+    log_func = getattr(logger, log_level)
+    
+    log_func(
+        "[%s] %s %s (%s) -> %d (%.2f ms)",
+        client_host,
+        method,
+        path,
+        service,
+        status_code,
         duration_ms,
     )
     return response
