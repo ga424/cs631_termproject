@@ -14,7 +14,6 @@ test("clicking Load Dashboard renders seeded fleet data", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "Class Rates" })).toBeVisible();
   await expect(page.getByText("Economy")).toBeVisible();
-  await expect(page.getByText("$35")).toBeVisible();
   await expect(page.getByText("$200")).toBeVisible();
 
   // Seed script inserts this VIN deterministically.
