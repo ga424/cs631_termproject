@@ -3,7 +3,7 @@
 from typing import Optional, Literal
 from datetime import datetime
 from uuid import UUID
-from pydantic import BaseModel, Field, model_validator, field_validator
+from pydantic import BaseModel, Field, model_validator, field_validator, ConfigDict
 
 
 # Location schemas
@@ -106,6 +106,8 @@ class CarClass(CarClassBase):
 
 # Model schemas
 class ModelBase(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
     model_name: str
     make_name: str
     model_year: int
@@ -117,21 +119,24 @@ class ModelCreate(ModelBase):
 
 
 class ModelUpdate(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
     make_name: Optional[str] = None
     model_year: Optional[int] = None
     class_id: Optional[UUID] = None
 
 
 class Model(ModelBase):
+    model_config = ConfigDict(from_attributes=True, protected_namespaces=())
+    
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # Car schemas
 class CarBase(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
     vin: str = Field(min_length=17, max_length=17)
     current_odometer_reading: int = Field(ge=0)
     location_id: UUID
@@ -143,17 +148,18 @@ class CarCreate(CarBase):
 
 
 class CarUpdate(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
     current_odometer_reading: Optional[int] = None
     location_id: Optional[UUID] = None
     model_name: Optional[str] = None
 
 
 class Car(CarBase):
+    model_config = ConfigDict(from_attributes=True, protected_namespaces=())
+    
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # Reservation schemas
@@ -269,6 +275,8 @@ class DashboardLocationSummary(BaseModel):
 
 
 class DashboardFleetItem(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
     vin: str
     model_name: str
     location_id: UUID
