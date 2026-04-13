@@ -355,6 +355,14 @@ Notes:
 - The Vite dev server proxies `/api` and `/health` to the backend.
 - If you need a custom API host, set `VITE_API_BASE_URL`.
 
+## Architecture And Journey Diagrams
+
+For visual workflow and architecture references:
+
+- `docs/C4_ARCHITECTURE.md` (C4 context/container/component/deployment)
+- `docs/DATABASE_ERD.md` (entity relationship model)
+- `docs/USER_JOURNEYS.md` (user journey flowchart, sequence, and lifecycle diagrams)
+
 ## User Journey Mapping
 
 To support CS631 Phase I/II/III traceability from requirements to implementation and tests, see:
