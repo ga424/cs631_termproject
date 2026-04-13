@@ -134,7 +134,7 @@ case "${1:-help}" in
         # Runs a filesystem Trivy scan against the repository contents.
         echo -e "${GREEN}Running Trivy security scan...${NC}"
                 docker run --rm -v "$PWD":/repo -w /repo aquasec/trivy:0.69.3 fs \
-          --scanners vuln,secret,config \
+                    --scanners vuln,secret,misconfig \
           --severity HIGH,CRITICAL \
           --ignore-unfixed \
           .
