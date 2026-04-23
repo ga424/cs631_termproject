@@ -210,14 +210,22 @@ Authorization: Bearer {access_token}
 ### Using cURL
 
 ```bash
+# Log in and reuse the returned access_token
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}'
+
 # List all customers
-curl http://localhost:8000/api/v1/customers
+curl http://localhost:8000/api/v1/customers \
+  -H "Authorization: Bearer {access_token}"
 
 # List all cars
-curl http://localhost:8000/api/v1/cars
+curl http://localhost:8000/api/v1/cars \
+  -H "Authorization: Bearer {access_token}"
 
 # View dashboard overview metrics
-curl http://localhost:8000/api/v1/dashboard/overview
+curl http://localhost:8000/api/v1/dashboard/overview \
+  -H "Authorization: Bearer {access_token}"
 
 # Get health status
 curl http://localhost:8000/health
