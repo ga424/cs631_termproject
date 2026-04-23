@@ -2,13 +2,21 @@ import { useEffect, useMemo, useState } from "react";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 const DASHBOARD_PATH = "/api/v1/dashboard/overview";
+const AUTH_STORAGE_KEY = "rentacar_staff_auth";
 
 async function apiRequest(path, options = {}) {
+  const { skipAuth, ...fetchOptions } = options;
+  const storedAuth = getStoredAuthSession();
+  const token = skipAuth ? "" : storedAuth?.access_token;
+  const headers = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(fetchOptions.headers || {})
+  };
+
   const response = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      "Content-Type": "application/json"
-    },
-    ...options
+    ...fetchOptions,
+    headers
   });
 
   if (!response.ok) {
@@ -27,6 +35,15 @@ async function apiRequest(path, options = {}) {
   }
 
   return response.json();
+}
+
+function getStoredAuthSession() {
+  try {
+    const rawSession = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    return rawSession ? JSON.parse(rawSession) : null;
+  } catch {
+    return null;
+  }
 }
 
 function formatDateTime(value) {
@@ -50,6 +67,9 @@ function formatCurrency(value) {
 }
 
 export default function App() {
+  const [authSession, setAuthSession] = useState(() => getStoredAuthSession());
+  const [loginForm, setLoginForm] = useState({ username: "admin", password: "admin123" });
+  const [loggingIn, setLoggingIn] = useState(false);
   const [dashboard, setDashboard] = useState(null);
   const [loadingDashboard, setLoadingDashboard] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
@@ -196,9 +216,49 @@ export default function App() {
     return classRateById[reservation.class_id] || null;
   }, [classRateById, openRentals, reservationById, returnForm.contract_no]);
 
+  const isAdmin = authSession?.role === "admin";
+
   useEffect(() => {
-    void refreshOperationalData();
-  }, []);
+    if (authSession) {
+      void refreshOperationalData();
+    }
+  }, [authSession]);
+
+  async function login(event) {
+    event.preventDefault();
+    setLoggingIn(true);
+    setError("");
+
+    try {
+      const session = await apiRequest("/api/v1/auth/login", {
+        method: "POST",
+        skipAuth: true,
+        body: JSON.stringify(loginForm)
+      });
+      window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+      setAuthSession(session);
+      showSuccess(`Signed in as ${session.username} (${session.role}).`);
+    } catch (err) {
+      setError(err.message || "Login failed.");
+    } finally {
+      setLoggingIn(false);
+    }
+  }
+
+  function logout() {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    setAuthSession(null);
+    setDashboard(null);
+    setCustomers([]);
+    setLocations([]);
+    setCarClasses([]);
+    setModels([]);
+    setCars([]);
+    setReservations([]);
+    setRentalAgreements([]);
+    setSuccess("");
+    setError("");
+  }
 
   async function refreshOperationalData() {
     setLoadingData(true);
@@ -358,6 +418,11 @@ export default function App() {
 
   async function createLocation(event) {
     event.preventDefault();
+    if (!isAdmin) {
+      setError("Admin role required to create locations.");
+      return;
+    }
+
     try {
       await apiRequest("/api/v1/locations", { method: "POST", body: JSON.stringify(locationForm) });
       showSuccess("Location created.");
@@ -369,6 +434,11 @@ export default function App() {
 
   async function createCarClass(event) {
     event.preventDefault();
+    if (!isAdmin) {
+      setError("Admin role required to manage car-class pricing.");
+      return;
+    }
+
     try {
       await apiRequest("/api/v1/car-classes", {
         method: "POST",
@@ -387,6 +457,11 @@ export default function App() {
 
   async function createModel(event) {
     event.preventDefault();
+    if (!isAdmin) {
+      setError("Admin role required to manage vehicle models.");
+      return;
+    }
+
     try {
       await apiRequest("/api/v1/models", {
         method: "POST",
@@ -406,6 +481,11 @@ export default function App() {
 
   async function createCar(event) {
     event.preventDefault();
+    if (!isAdmin) {
+      setError("Admin role required to register cars.");
+      return;
+    }
+
     try {
       await apiRequest("/api/v1/cars", {
         method: "POST",
@@ -424,6 +504,51 @@ export default function App() {
     }
   }
 
+  if (!authSession) {
+    return (
+      <div className="page auth-page">
+        <section className="auth-shell">
+          <div className="auth-copy">
+            <p className="eyebrow">RentACar Staff Portal</p>
+            <h1>Sign in to run the rental journey</h1>
+            <p>
+              JWT login separates the primary personas: agents handle customers, reservations,
+              pickups, returns, and cancellations; managers monitor fleet operations; admins also
+              maintain inventory, models, branches, and pricing.
+            </p>
+            <div className="persona-grid">
+              <div>
+                <strong>Agent</strong>
+                <span>agent / agent123</span>
+              </div>
+              <div>
+                <strong>Manager</strong>
+                <span>manager / manager123</span>
+              </div>
+              <div>
+                <strong>Admin</strong>
+                <span>admin / admin123</span>
+              </div>
+            </div>
+          </div>
+          <form onSubmit={login} className="login-card">
+            <h2>Staff Login</h2>
+            {error ? <div className="alert">{error}</div> : null}
+            <label className="field-label">
+              Username
+              <input value={loginForm.username} onChange={(event) => setLoginForm((previous) => ({ ...previous, username: event.target.value }))} required />
+            </label>
+            <label className="field-label">
+              Password
+              <input type="password" value={loginForm.password} onChange={(event) => setLoginForm((previous) => ({ ...previous, password: event.target.value }))} required />
+            </label>
+            <button type="submit" disabled={loggingIn}>{loggingIn ? "Signing in..." : "Sign In"}</button>
+          </form>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="page">
       <header className="hero">
@@ -431,6 +556,9 @@ export default function App() {
           <p className="eyebrow">Operations Center</p>
           <h1>Rental Journey Console</h1>
           <p>Handle calls, walk-ins, pickups, returns, pricing, and branch inventory from one place.</p>
+          <div className="session-pill">
+            Signed in as {authSession.username} ({authSession.role})
+          </div>
         </div>
         <div className="hero-actions">
           <button onClick={refreshOperationalData} disabled={loadingData}>
@@ -439,6 +567,7 @@ export default function App() {
           <button onClick={loadData} disabled={loadingDashboard}>
             {loadingDashboard ? "Refreshing..." : dashboard ? "Refresh Dashboard" : "Load Dashboard"}
           </button>
+          <button type="button" className="secondary-button" onClick={logout}>Sign Out</button>
         </div>
       </header>
 
@@ -606,77 +735,87 @@ export default function App() {
           ) : null}
         </article>
 
-        <article className="panel panel-wide">
-          <div className="panel-title-row">
-            <h3>Journey 6: Inventory And Pricing Administration</h3>
-            <span>Create locations, rates, models, and fleet records</span>
-          </div>
-          <div className="form-grid two">
-            <form onSubmit={createLocation} className="form-card">
-              <h4>New Location</h4>
-              <div className="field-grid two">
-                <input placeholder="Street" value={locationForm.street} onChange={(event) => setLocationForm((previous) => ({ ...previous, street: event.target.value }))} required />
-                <input placeholder="City" value={locationForm.city} onChange={(event) => setLocationForm((previous) => ({ ...previous, city: event.target.value }))} required />
-                <input placeholder="State" value={locationForm.state} onChange={(event) => setLocationForm((previous) => ({ ...previous, state: event.target.value.toUpperCase().slice(0, 2) }))} required />
-                <input placeholder="ZIP" value={locationForm.zip} onChange={(event) => setLocationForm((previous) => ({ ...previous, zip: event.target.value }))} required />
-              </div>
-              <button type="submit">Add Location</button>
-            </form>
+        {isAdmin ? (
+          <article className="panel panel-wide">
+            <div className="panel-title-row">
+              <h3>Journey 6: Inventory And Pricing Administration</h3>
+              <span>Create locations, rates, models, and fleet records</span>
+            </div>
+            <div className="form-grid two">
+              <form onSubmit={createLocation} className="form-card">
+                <h4>New Location</h4>
+                <div className="field-grid two">
+                  <input placeholder="Street" value={locationForm.street} onChange={(event) => setLocationForm((previous) => ({ ...previous, street: event.target.value }))} required />
+                  <input placeholder="City" value={locationForm.city} onChange={(event) => setLocationForm((previous) => ({ ...previous, city: event.target.value }))} required />
+                  <input placeholder="State" value={locationForm.state} onChange={(event) => setLocationForm((previous) => ({ ...previous, state: event.target.value.toUpperCase().slice(0, 2) }))} required />
+                  <input placeholder="ZIP" value={locationForm.zip} onChange={(event) => setLocationForm((previous) => ({ ...previous, zip: event.target.value }))} required />
+                </div>
+                <button type="submit">Add Location</button>
+              </form>
 
-            <form onSubmit={createCarClass} className="form-card">
-              <h4>New Car Class</h4>
-              <div className="field-grid">
-                <input placeholder="Class name" value={classForm.class_name} onChange={(event) => setClassForm((previous) => ({ ...previous, class_name: event.target.value }))} required />
-                <input type="number" min="1" step="0.01" placeholder="Daily rate" value={classForm.daily_rate} onChange={(event) => setClassForm((previous) => ({ ...previous, daily_rate: event.target.value }))} required />
-                <input type="number" min="1" step="0.01" placeholder="Weekly rate" value={classForm.weekly_rate} onChange={(event) => setClassForm((previous) => ({ ...previous, weekly_rate: event.target.value }))} required />
-              </div>
-              <button type="submit">Add Class</button>
-            </form>
+              <form onSubmit={createCarClass} className="form-card">
+                <h4>New Car Class</h4>
+                <div className="field-grid">
+                  <input placeholder="Class name" value={classForm.class_name} onChange={(event) => setClassForm((previous) => ({ ...previous, class_name: event.target.value }))} required />
+                  <input type="number" min="1" step="0.01" placeholder="Daily rate" value={classForm.daily_rate} onChange={(event) => setClassForm((previous) => ({ ...previous, daily_rate: event.target.value }))} required />
+                  <input type="number" min="1" step="0.01" placeholder="Weekly rate" value={classForm.weekly_rate} onChange={(event) => setClassForm((previous) => ({ ...previous, weekly_rate: event.target.value }))} required />
+                </div>
+                <button type="submit">Add Class</button>
+              </form>
 
-            <form onSubmit={createModel} className="form-card">
-              <h4>New Model</h4>
-              <div className="field-grid">
-                <input placeholder="Model name" value={modelForm.model_name} onChange={(event) => setModelForm((previous) => ({ ...previous, model_name: event.target.value }))} required />
-                <input placeholder="Make" value={modelForm.make_name} onChange={(event) => setModelForm((previous) => ({ ...previous, make_name: event.target.value }))} required />
-                <input type="number" min="1980" placeholder="Model year" value={modelForm.model_year} onChange={(event) => setModelForm((previous) => ({ ...previous, model_year: event.target.value }))} required />
-                <select value={modelForm.class_id} onChange={(event) => setModelForm((previous) => ({ ...previous, class_id: event.target.value }))} required>
-                  <option value="">Class</option>
-                  {carClasses.map((carClass) => (
-                    <option key={carClass.class_id} value={carClass.class_id}>
-                      {carClass.class_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <button type="submit">Add Model</button>
-            </form>
+              <form onSubmit={createModel} className="form-card">
+                <h4>New Model</h4>
+                <div className="field-grid">
+                  <input placeholder="Model name" value={modelForm.model_name} onChange={(event) => setModelForm((previous) => ({ ...previous, model_name: event.target.value }))} required />
+                  <input placeholder="Make" value={modelForm.make_name} onChange={(event) => setModelForm((previous) => ({ ...previous, make_name: event.target.value }))} required />
+                  <input type="number" min="1980" placeholder="Model year" value={modelForm.model_year} onChange={(event) => setModelForm((previous) => ({ ...previous, model_year: event.target.value }))} required />
+                  <select value={modelForm.class_id} onChange={(event) => setModelForm((previous) => ({ ...previous, class_id: event.target.value }))} required>
+                    <option value="">Class</option>
+                    {carClasses.map((carClass) => (
+                      <option key={carClass.class_id} value={carClass.class_id}>
+                        {carClass.class_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button type="submit">Add Model</button>
+              </form>
 
-            <form onSubmit={createCar} className="form-card">
-              <h4>Register Car</h4>
-              <div className="field-grid">
-                <input placeholder="VIN (17 chars)" value={carForm.vin} onChange={(event) => setCarForm((previous) => ({ ...previous, vin: event.target.value }))} minLength={17} maxLength={17} required />
-                <input type="number" min="0" placeholder="Current odometer" value={carForm.current_odometer_reading} onChange={(event) => setCarForm((previous) => ({ ...previous, current_odometer_reading: event.target.value }))} required />
-                <select value={carForm.location_id} onChange={(event) => setCarForm((previous) => ({ ...previous, location_id: event.target.value }))} required>
-                  <option value="">Location</option>
-                  {locations.map((location) => (
-                    <option key={location.location_id} value={location.location_id}>
-                      {location.city}, {location.state}
-                    </option>
-                  ))}
-                </select>
-                <select value={carForm.model_name} onChange={(event) => setCarForm((previous) => ({ ...previous, model_name: event.target.value }))} required>
-                  <option value="">Model</option>
-                  {models.map((model) => (
-                    <option key={model.model_name} value={model.model_name}>
-                      {model.make_name} {model.model_name} ({model.model_year})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <button type="submit">Add Car</button>
-            </form>
-          </div>
-        </article>
+              <form onSubmit={createCar} className="form-card">
+                <h4>Register Car</h4>
+                <div className="field-grid">
+                  <input placeholder="VIN (17 chars)" value={carForm.vin} onChange={(event) => setCarForm((previous) => ({ ...previous, vin: event.target.value }))} minLength={17} maxLength={17} required />
+                  <input type="number" min="0" placeholder="Current odometer" value={carForm.current_odometer_reading} onChange={(event) => setCarForm((previous) => ({ ...previous, current_odometer_reading: event.target.value }))} required />
+                  <select value={carForm.location_id} onChange={(event) => setCarForm((previous) => ({ ...previous, location_id: event.target.value }))} required>
+                    <option value="">Location</option>
+                    {locations.map((location) => (
+                      <option key={location.location_id} value={location.location_id}>
+                        {location.city}, {location.state}
+                      </option>
+                    ))}
+                  </select>
+                  <select value={carForm.model_name} onChange={(event) => setCarForm((previous) => ({ ...previous, model_name: event.target.value }))} required>
+                    <option value="">Model</option>
+                    {models.map((model) => (
+                      <option key={model.model_name} value={model.model_name}>
+                        {model.make_name} {model.model_name} ({model.model_year})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button type="submit">Add Car</button>
+              </form>
+            </div>
+          </article>
+        ) : (
+          <article className="panel panel-wide">
+            <div className="panel-title-row">
+              <h3>Journey 6: Inventory And Pricing Administration</h3>
+              <span>Admin-only controls</span>
+            </div>
+            <div className="empty">Sign in as admin to create locations, rates, models, and fleet records.</div>
+          </article>
+        )}
       </section>
 
       {dashboard ? (

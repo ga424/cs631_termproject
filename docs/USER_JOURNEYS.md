@@ -2,6 +2,20 @@
 
 This document maps user workflows directly to the official CS631 RentACar requirements and to the implemented API resources.
 
+## Primary Personas And Authentication
+
+- **Service Agent:** signs in with JWT credentials and handles customer intake, phone reservations, walk-ins, pickup rental agreements, cancellation/no-show updates, returns, and billing.
+- **Branch Manager:** signs in with JWT credentials and reviews operational dashboard metrics for fleet availability, active rentals, overdue rentals, upcoming pickups, utilization, and rates.
+- **Administrator:** signs in with JWT credentials and can perform all service-agent and manager workflows plus inventory/pricing administration for locations, car classes, models, and cars.
+
+### Demo Staff Credentials
+
+- Agent: `agent` / `agent123`
+- Manager: `manager` / `manager123`
+- Admin: `admin` / `admin123`
+
+All `/api/v1/*` operational resources require `Authorization: Bearer <jwt>` except `/api/v1/auth/login`, `/`, `/health`, `/docs`, and `/api/v1`.
+
 ## Journey Views (Diagrams)
 
 ### End-To-End Journey Flow
