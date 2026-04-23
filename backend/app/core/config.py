@@ -24,6 +24,14 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     log_level: str = "INFO"
     log_json: bool = False
+    jwt_secret_key: str = "dev-rentacar-secret-change-me"
+    jwt_algorithm: str = "HS256"
+    jwt_access_token_minutes: int = 480
+    staff_users: str = (
+        "agent:agent123:agent,"
+        "manager:manager123:manager,"
+        "admin:admin123:admin"
+    )
     
     class Config:
         # Local development defaults come from .env if present.
