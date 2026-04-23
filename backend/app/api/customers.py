@@ -39,7 +39,7 @@ def create_customer(customer: CustomerCreate, db: Session = Depends(get_db)):
 @router.put("/{customer_id}", response_model=CustomerSchema)
 def update_customer(customer_id: UUID, customer: CustomerUpdate, db: Session = Depends(get_db)):
     """Update a customer"""
-    db_customer = db.query(Customer).filter(Customer.id == customer_id).first()
+    db_customer = db.query(Customer).filter(Customer.customer_id == customer_id).first()
     if not db_customer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
     
@@ -56,7 +56,7 @@ def update_customer(customer_id: UUID, customer: CustomerUpdate, db: Session = D
 @router.delete("/{customer_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_customer(customer_id: UUID, db: Session = Depends(get_db)):
     """Delete a customer"""
-    db_customer = db.query(Customer).filter(Customer.id == customer_id).first()
+    db_customer = db.query(Customer).filter(Customer.customer_id == customer_id).first()
     if not db_customer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
     
