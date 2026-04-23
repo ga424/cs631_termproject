@@ -3,11 +3,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
+from app.core.security import require_staff
 from app.db.session import get_db
 from app.models.models import Customer
 from app.schemas import Customer as CustomerSchema, CustomerCreate, CustomerUpdate
 
-router = APIRouter(prefix="/api/v1/customers", tags=["customers"])
+router = APIRouter(prefix="/api/v1/customers", tags=["customers"], dependencies=[Depends(require_staff)])
 
 
 @router.get("", response_model=list[CustomerSchema])

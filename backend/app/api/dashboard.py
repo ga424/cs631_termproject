@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.security import require_staff
 from app.db.session import get_db
 from app.models.models import Car, CarClass, Location, Model, RentalAgreement, Reservation
 from app.schemas import (
@@ -17,7 +18,7 @@ from app.schemas import (
     DashboardUpcomingReservation,
 )
 
-router = APIRouter(prefix="/api/v1/dashboard", tags=["dashboard"])
+router = APIRouter(prefix="/api/v1/dashboard", tags=["dashboard"], dependencies=[Depends(require_staff)])
 
 
 def _normalize_status(status: str | None) -> str:
