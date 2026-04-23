@@ -3,6 +3,40 @@ import { useEffect, useMemo, useState } from "react";
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 const DASHBOARD_PATH = "/api/v1/dashboard/overview";
 const AUTH_STORAGE_KEY = "rentacar_staff_auth";
+const DEFAULT_CUSTOMER_FORM = {
+  first_name: "",
+  last_name: "",
+  street: "",
+  city: "",
+  state: "",
+  zip: "",
+  license_number: "",
+  license_state: "",
+  credit_card_type: "Visa",
+  credit_card_number: "",
+  exp_month: 12,
+  exp_year: new Date().getFullYear() + 2
+};
+const DEFAULT_RESERVATION_FORM = {
+  customer_id: "",
+  location_id: "",
+  class_id: "",
+  pickup_date_time: "",
+  return_date_time_requested: "",
+  reservation_status: "ACTIVE"
+};
+const DEFAULT_RENTAL_FORM = {
+  reservation_id: "",
+  vin: "",
+  rental_start_date_time: "",
+  start_odometer_reading: ""
+};
+const DEFAULT_RETURN_FORM = {
+  contract_no: "",
+  rental_end_date_time: "",
+  end_odometer_reading: "",
+  actual_cost: ""
+};
 
 async function apiRequest(path, options = {}) {
   const { skipAuth, ...fetchOptions } = options;
@@ -75,6 +109,7 @@ export default function App() {
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [actionLog, setActionLog] = useState([]);
 
   const [customers, setCustomers] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -84,48 +119,18 @@ export default function App() {
   const [reservations, setReservations] = useState([]);
   const [rentalAgreements, setRentalAgreements] = useState([]);
 
-  const [customerForm, setCustomerForm] = useState({
-    first_name: "",
-    last_name: "",
-    street: "",
-    city: "",
-    state: "",
-    zip: "",
-    license_number: "",
-    license_state: "",
-    credit_card_type: "Visa",
-    credit_card_number: "",
-    exp_month: 12,
-    exp_year: new Date().getFullYear() + 2
-  });
+  const [customerForm, setCustomerForm] = useState(DEFAULT_CUSTOMER_FORM);
 
-  const [reservationForm, setReservationForm] = useState({
-    customer_id: "",
-    location_id: "",
-    class_id: "",
-    pickup_date_time: "",
-    return_date_time_requested: "",
-    reservation_status: "ACTIVE"
-  });
+  const [reservationForm, setReservationForm] = useState(DEFAULT_RESERVATION_FORM);
 
-  const [rentalForm, setRentalForm] = useState({
-    reservation_id: "",
-    vin: "",
-    rental_start_date_time: "",
-    start_odometer_reading: ""
-  });
+  const [rentalForm, setRentalForm] = useState(DEFAULT_RENTAL_FORM);
 
   const [reservationStatusForm, setReservationStatusForm] = useState({
     reservation_id: "",
     reservation_status: "CANCELED"
   });
 
-  const [returnForm, setReturnForm] = useState({
-    contract_no: "",
-    rental_end_date_time: "",
-    end_odometer_reading: "",
-    actual_cost: ""
-  });
+  const [returnForm, setReturnForm] = useState(DEFAULT_RETURN_FORM);
 
   const [locationForm, setLocationForm] = useState({ street: "", city: "", state: "", zip: "" });
   const [classForm, setClassForm] = useState({ class_name: "", daily_rate: "", weekly_rate: "" });
@@ -160,6 +165,13 @@ export default function App() {
     }, {});
   }, [locations]);
 
+  const modelByName = useMemo(() => {
+    return models.reduce((acc, model) => {
+      acc[model.model_name] = model;
+      return acc;
+    }, {});
+  }, [models]);
+
   const activeReservations = useMemo(
     () => reservations.filter((reservation) => reservation.reservation_status === "ACTIVE"),
     [reservations]
@@ -169,6 +181,27 @@ export default function App() {
     () => rentalAgreements.filter((agreement) => !agreement.rental_end_date_time),
     [rentalAgreements]
   );
+
+  const openRentalVinSet = useMemo(
+    () => new Set(openRentals.map((agreement) => agreement.vin)),
+    [openRentals]
+  );
+
+  const selectedPickupReservation = reservationById[rentalForm.reservation_id];
+  const assignableCars = useMemo(() => {
+    if (!selectedPickupReservation) {
+      return cars.filter((car) => !openRentalVinSet.has(car.vin));
+    }
+
+    return cars.filter((car) => {
+      const model = modelByName[car.model_name];
+      return (
+        !openRentalVinSet.has(car.vin)
+        && car.location_id === selectedPickupReservation.location_id
+        && model?.class_id === selectedPickupReservation.class_id
+      );
+    });
+  }, [cars, modelByName, openRentalVinSet, selectedPickupReservation]);
 
   const stats = useMemo(() => {
     if (!dashboard) {
@@ -292,6 +325,10 @@ export default function App() {
   function showSuccess(message) {
     setSuccess(message);
     setError("");
+    setActionLog((previous) => [
+      { id: `${Date.now()}-${message}`, message, timestamp: new Date().toLocaleTimeString() },
+      ...previous
+    ].slice(0, 6));
   }
 
   async function loadData() {
@@ -320,6 +357,7 @@ export default function App() {
         })
       });
       setReservationForm((previous) => ({ ...previous, customer_id: created.customer_id }));
+      setCustomerForm(DEFAULT_CUSTOMER_FORM);
       showSuccess(`Customer created: ${created.first_name} ${created.last_name}`);
       await refreshOperationalData();
     } catch (err) {
@@ -340,6 +378,7 @@ export default function App() {
       });
       setRentalForm((previous) => ({ ...previous, reservation_id: created.reservation_id }));
       setReservationStatusForm((previous) => ({ ...previous, reservation_id: created.reservation_id }));
+      setReservationForm(DEFAULT_RESERVATION_FORM);
       showSuccess(`Reservation created: ${created.reservation_id}`);
       await refreshOperationalData();
     } catch (err) {
@@ -359,6 +398,7 @@ export default function App() {
         })
       });
       setReturnForm((previous) => ({ ...previous, contract_no: created.contract_no }));
+      setRentalForm(DEFAULT_RENTAL_FORM);
       showSuccess(`Rental agreement created: ${created.contract_no}`);
       await refreshOperationalData();
       await loadData();
@@ -380,6 +420,7 @@ export default function App() {
         body: JSON.stringify({ reservation_status: reservationStatusForm.reservation_status })
       });
       showSuccess(`Reservation marked as ${reservationStatusForm.reservation_status}`);
+      setReservationStatusForm({ reservation_id: "", reservation_status: "CANCELED" });
       await refreshOperationalData();
       await loadData();
     } catch (err) {
@@ -409,6 +450,7 @@ export default function App() {
         body: JSON.stringify(payload)
       });
       showSuccess(`Rental ${returnForm.contract_no} closed and billed.`);
+      setReturnForm(DEFAULT_RETURN_FORM);
       await refreshOperationalData();
       await loadData();
     } catch (err) {
@@ -424,7 +466,10 @@ export default function App() {
     }
 
     try {
-      await apiRequest("/api/v1/locations", { method: "POST", body: JSON.stringify(locationForm) });
+      const created = await apiRequest("/api/v1/locations", { method: "POST", body: JSON.stringify(locationForm) });
+      setLocationForm({ street: "", city: "", state: "", zip: "" });
+      setReservationForm((previous) => ({ ...previous, location_id: created.location_id }));
+      setCarForm((previous) => ({ ...previous, location_id: created.location_id }));
       showSuccess("Location created.");
       await refreshOperationalData();
     } catch (err) {
@@ -440,7 +485,7 @@ export default function App() {
     }
 
     try {
-      await apiRequest("/api/v1/car-classes", {
+      const created = await apiRequest("/api/v1/car-classes", {
         method: "POST",
         body: JSON.stringify({
           class_name: classForm.class_name,
@@ -448,6 +493,9 @@ export default function App() {
           weekly_rate: Number(classForm.weekly_rate)
         })
       });
+      setClassForm({ class_name: "", daily_rate: "", weekly_rate: "" });
+      setReservationForm((previous) => ({ ...previous, class_id: created.class_id }));
+      setModelForm((previous) => ({ ...previous, class_id: created.class_id }));
       showSuccess("Car class created.");
       await refreshOperationalData();
     } catch (err) {
@@ -463,7 +511,7 @@ export default function App() {
     }
 
     try {
-      await apiRequest("/api/v1/models", {
+      const created = await apiRequest("/api/v1/models", {
         method: "POST",
         body: JSON.stringify({
           model_name: modelForm.model_name,
@@ -472,6 +520,8 @@ export default function App() {
           class_id: modelForm.class_id
         })
       });
+      setModelForm({ model_name: "", make_name: "", model_year: "", class_id: "" });
+      setCarForm((previous) => ({ ...previous, model_name: created.model_name }));
       showSuccess("Model created.");
       await refreshOperationalData();
     } catch (err) {
@@ -496,11 +546,27 @@ export default function App() {
           model_name: carForm.model_name
         })
       });
+      setCarForm({ vin: "", current_odometer_reading: "", location_id: "", model_name: "" });
       showSuccess("Car added to fleet.");
       await refreshOperationalData();
       await loadData();
     } catch (err) {
       setError(err.message || "Failed to create car.");
+    }
+  }
+
+  async function deleteResource(path, label, message) {
+    if (!window.confirm(`Delete ${label}?`)) {
+      return;
+    }
+
+    try {
+      await apiRequest(path, { method: "DELETE" });
+      showSuccess(message);
+      await refreshOperationalData();
+      await loadData();
+    } catch (err) {
+      setError(err.message || `Failed to delete ${label}.`);
     }
   }
 
@@ -573,6 +639,19 @@ export default function App() {
 
       {error ? <div className="alert">{error}</div> : null}
       {success ? <div className="alert success">{success}</div> : null}
+      {actionLog.length ? (
+        <section className="action-log" aria-label="Recent actions">
+          <strong>Recent actions</strong>
+          <ul>
+            {actionLog.map((entry) => (
+              <li key={entry.id}>
+                <span>{entry.message}</span>
+                <time>{entry.timestamp}</time>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {!dashboard && !loadingDashboard ? (
         <div className="empty">Load the dashboard to view live fleet metrics.</div>
@@ -666,12 +745,17 @@ export default function App() {
             </select>
             <select value={rentalForm.vin} onChange={(event) => setRentalForm((previous) => ({ ...previous, vin: event.target.value }))} required>
               <option value="">Assign VIN</option>
-              {cars.map((car) => (
+              {assignableCars.map((car) => (
                 <option key={car.vin} value={car.vin}>
                   {car.vin} - {car.model_name}
                 </option>
               ))}
             </select>
+            {selectedPickupReservation ? (
+              <div className="hint-box">
+                Showing available cars at {locationById[selectedPickupReservation.location_id]?.city || "selected location"} for {classRateById[selectedPickupReservation.class_id]?.class_name || "reserved class"}.
+              </div>
+            ) : null}
             <label className="field-label">
               Rental Start
               <input type="datetime-local" value={rentalForm.rental_start_date_time} onChange={(event) => setRentalForm((previous) => ({ ...previous, rental_start_date_time: event.target.value }))} required />
@@ -816,6 +900,147 @@ export default function App() {
             <div className="empty">Sign in as admin to create locations, rates, models, and fleet records.</div>
           </article>
         )}
+      </section>
+
+      <section className="panel-grid">
+        <article className="panel panel-wide">
+          <div className="panel-title-row">
+            <h3>Operational Records</h3>
+            <span>Immediate confirmation of created, updated, and deleted records</span>
+          </div>
+          <div className="record-grid">
+            <div>
+              <h4>Customers ({customers.length})</h4>
+              <div className="table-wrap compact-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>License</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customers.slice(0, 8).map((customer) => (
+                      <tr key={customer.customer_id}>
+                        <td>{customer.first_name} {customer.last_name}</td>
+                        <td>{customer.license_state}-{customer.license_number}</td>
+                        <td>
+                          <button type="button" className="tiny-button danger-button" onClick={() => deleteResource(`/api/v1/customers/${customer.customer_id}`, `customer ${customer.first_name} ${customer.last_name}`, "Customer deleted.")}>
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <h4>Reservations ({reservations.length})</h4>
+              <div className="table-wrap compact-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Customer</th>
+                      <th>Status</th>
+                      <th>Pickup</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reservations.slice(0, 8).map((reservation) => {
+                      const customer = customerById[reservation.customer_id];
+                      return (
+                        <tr key={reservation.reservation_id}>
+                          <td>{customer ? `${customer.first_name} ${customer.last_name}` : reservation.customer_id.slice(0, 8)}</td>
+                          <td><span className="pill">{reservation.reservation_status}</span></td>
+                          <td>{formatDateTime(reservation.pickup_date_time)}</td>
+                          <td>
+                            <button type="button" className="tiny-button danger-button" onClick={() => deleteResource(`/api/v1/reservations/${reservation.reservation_id}`, `reservation ${reservation.reservation_id.slice(0, 8)}`, "Reservation deleted.")}>
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <h4>Rental Agreements ({rentalAgreements.length})</h4>
+              <div className="table-wrap compact-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Contract</th>
+                      <th>VIN</th>
+                      <th>Status</th>
+                      <th>Cost</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rentalAgreements.slice(0, 8).map((agreement) => (
+                      <tr key={agreement.contract_no}>
+                        <td>{agreement.contract_no.slice(0, 8)}</td>
+                        <td>{agreement.vin}</td>
+                        <td><span className={agreement.rental_end_date_time ? "pill" : "pill danger"}>{agreement.rental_end_date_time ? "CLOSED" : "OPEN"}</span></td>
+                        <td>{agreement.actual_cost ? formatCurrency(agreement.actual_cost) : "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        {isAdmin ? (
+          <article className="panel panel-wide">
+            <div className="panel-title-row">
+              <h3>Admin Inventory Records</h3>
+              <span>Delete empty setup records or newly added inventory</span>
+            </div>
+            <div className="record-grid">
+              <div>
+                <h4>Locations ({locations.length})</h4>
+                <ul className="manage-list">
+                  {locations.slice(0, 8).map((location) => (
+                    <li key={location.location_id}>
+                      <span>{location.city}, {location.state}</span>
+                      <button type="button" className="tiny-button danger-button" onClick={() => deleteResource(`/api/v1/locations/${location.location_id}`, `location ${location.city}`, "Location deleted.")}>Delete</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h4>Classes ({carClasses.length})</h4>
+                <ul className="manage-list">
+                  {carClasses.slice(0, 8).map((carClass) => (
+                    <li key={carClass.class_id}>
+                      <span>{carClass.class_name} {formatCurrency(carClass.daily_rate)}/day</span>
+                      <button type="button" className="tiny-button danger-button" onClick={() => deleteResource(`/api/v1/car-classes/${carClass.class_id}`, `class ${carClass.class_name}`, "Car class deleted.")}>Delete</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h4>Cars ({cars.length})</h4>
+                <ul className="manage-list">
+                  {cars.slice(0, 8).map((car) => (
+                    <li key={car.vin}>
+                      <span>{car.vin} {car.model_name}</span>
+                      <button type="button" className="tiny-button danger-button" onClick={() => deleteResource(`/api/v1/cars/${car.vin}`, `car ${car.vin}`, "Car deleted.")}>Delete</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </article>
+        ) : null}
       </section>
 
       {dashboard ? (
