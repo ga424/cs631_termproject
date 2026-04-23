@@ -2,11 +2,12 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from app.core.security import require_admin, require_staff
 from app.db.session import get_db
 from app.models.models import Model
 from app.schemas import Model as ModelSchema, ModelCreate, ModelUpdate
 
-router = APIRouter(prefix="/api/v1/models", tags=["models"])
+router = APIRouter(prefix="/api/v1/models", tags=["models"], dependencies=[Depends(require_staff)])
 
 
 @router.get("", response_model=list[ModelSchema])
@@ -25,7 +26,7 @@ def get_model(model_name: str, db: Session = Depends(get_db)):
     return model
 
 
-@router.post("", response_model=ModelSchema, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ModelSchema, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_admin)])
 def create_model(model: ModelCreate, db: Session = Depends(get_db)):
     """Create a new model"""
     db_model = Model(**model.dict())
@@ -35,7 +36,7 @@ def create_model(model: ModelCreate, db: Session = Depends(get_db)):
     return db_model
 
 
-@router.put("/{model_name}", response_model=ModelSchema)
+@router.put("/{model_name}", response_model=ModelSchema, dependencies=[Depends(require_admin)])
 def update_model(model_name: str, model: ModelUpdate, db: Session = Depends(get_db)):
     """Update a model"""
     db_model = db.query(Model).filter(Model.model_name == model_name).first()
@@ -52,7 +53,7 @@ def update_model(model_name: str, model: ModelUpdate, db: Session = Depends(get_
     return db_model
 
 
-@router.delete("/{model_name}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{model_name}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin)])
 def delete_model(model_name: str, db: Session = Depends(get_db)):
     """Delete a model"""
     db_model = db.query(Model).filter(Model.model_name == model_name).first()
