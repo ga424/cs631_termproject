@@ -52,6 +52,31 @@ def test_api_version_lists_expected_endpoints():
     assert payload["version"] == "v1"
     assert "/api/v1/customers" == payload["endpoints"]["customers"]
     assert "/api/v1/rental-agreements" == payload["endpoints"]["rental_agreements"]
+    assert "/api/v1/auth/login" == payload["endpoints"]["auth_login"]
+
+
+def test_login_returns_bearer_token_for_staff_user():
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"username": "admin", "password": "admin123"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["token_type"] == "bearer"
+    assert payload["username"] == "admin"
+    assert payload["role"] == "admin"
+    assert payload["access_token"].count(".") == 2
+
+
+def test_protected_operational_endpoints_require_jwt():
+    client = TestClient(app)
+
+    response = client.get("/api/v1/dashboard/overview")
+
+    assert response.status_code == 401
 
 
 def test_health_returns_healthy_when_db_is_reachable():

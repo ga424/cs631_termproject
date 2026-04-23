@@ -1,12 +1,14 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from conftest import auth_headers
 
 
 def test_dashboard_overview_returns_expected_top_level_shape():
     client = TestClient(app)
+    headers = auth_headers(client)
 
-    response = client.get("/api/v1/dashboard/overview")
+    response = client.get("/api/v1/dashboard/overview", headers=headers)
 
     assert response.status_code == 200
     payload = response.json()
@@ -21,8 +23,9 @@ def test_dashboard_overview_returns_expected_top_level_shape():
 
 def test_dashboard_rates_include_seeded_classes():
     client = TestClient(app)
+    headers = auth_headers(client)
 
-    payload = client.get("/api/v1/dashboard/overview").json()
+    payload = client.get("/api/v1/dashboard/overview", headers=headers).json()
     rates = {rate["class_name"]: rate for rate in payload["rates"]}
 
     assert rates["Economy"]["daily_rate"] == 35.0
@@ -32,8 +35,9 @@ def test_dashboard_rates_include_seeded_classes():
 
 def test_dashboard_totals_are_internally_consistent():
     client = TestClient(app)
+    headers = auth_headers(client)
 
-    payload = client.get("/api/v1/dashboard/overview").json()
+    payload = client.get("/api/v1/dashboard/overview", headers=headers).json()
     totals = payload["totals"]
 
     assert totals["total_cars"] == totals["available_cars"] + totals["rented_cars"]
@@ -49,8 +53,9 @@ def test_dashboard_totals_are_internally_consistent():
 
 def test_dashboard_fleet_status_and_active_rentals_align():
     client = TestClient(app)
+    headers = auth_headers(client)
 
-    payload = client.get("/api/v1/dashboard/overview").json()
+    payload = client.get("/api/v1/dashboard/overview", headers=headers).json()
     fleet = payload["fleet"]
     active_rentals = payload["active_rentals"]
 

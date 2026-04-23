@@ -14,6 +14,7 @@ from app.schemas import (
     Reservation,
     RentalAgreement,
 )
+from conftest import auth_headers
 
 
 def test_customer_exp_month_must_be_1_to_12():
@@ -113,6 +114,7 @@ def test_rental_agreement_closeout_constraints():
 
 def test_api_rejects_invalid_reservation_payloads():
     client = TestClient(app)
+    headers = auth_headers(client)
     pickup = datetime.utcnow().replace(microsecond=0)
 
     invalid_status_payload = {
@@ -123,7 +125,7 @@ def test_api_rejects_invalid_reservation_payloads():
         "return_date_time_requested": (pickup + timedelta(hours=2)).isoformat(),
         "reservation_status": "PENDING",
     }
-    response = client.post("/api/v1/reservations", json=invalid_status_payload)
+    response = client.post("/api/v1/reservations", json=invalid_status_payload, headers=headers)
     assert response.status_code == 422
 
     invalid_dates_payload = {
@@ -134,12 +136,13 @@ def test_api_rejects_invalid_reservation_payloads():
         "return_date_time_requested": (pickup - timedelta(hours=2)).isoformat(),
         "reservation_status": "ACTIVE",
     }
-    response = client.post("/api/v1/reservations", json=invalid_dates_payload)
+    response = client.post("/api/v1/reservations", json=invalid_dates_payload, headers=headers)
     assert response.status_code == 422
 
 
 def test_api_rejects_invalid_customer_expiration_month():
     client = TestClient(app)
+    headers = auth_headers(client)
     payload = {
         "first_name": "James",
         "last_name": "Carter",
@@ -154,31 +157,33 @@ def test_api_rejects_invalid_customer_expiration_month():
         "exp_month": 13,
         "exp_year": 2027,
     }
-    response = client.post("/api/v1/customers", json=payload)
+    response = client.post("/api/v1/customers", json=payload, headers=headers)
     assert response.status_code == 422
 
 
 def test_api_rejects_invalid_car_vin_and_odometer():
     client = TestClient(app)
+    headers = auth_headers(client)
     payload = {
         "vin": "SHORTVIN",
         "current_odometer_reading": -10,
         "location_id": str(uuid4()),
         "model_name": "Toyota Corolla",
     }
-    response = client.post("/api/v1/cars", json=payload)
+    response = client.post("/api/v1/cars", json=payload, headers=headers)
     assert response.status_code == 422
 
 
 def test_api_rejects_invalid_rental_start_odometer():
     client = TestClient(app)
+    headers = auth_headers(client)
     payload = {
         "reservation_id": str(uuid4()),
         "vin": "1HGCM82633A001001",
         "rental_start_date_time": datetime.utcnow().replace(microsecond=0).isoformat(),
         "start_odometer_reading": -1,
     }
-    response = client.post("/api/v1/rental-agreements", json=payload)
+    response = client.post("/api/v1/rental-agreements", json=payload, headers=headers)
     assert response.status_code == 422
 
 
