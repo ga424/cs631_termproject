@@ -11,4 +11,7 @@
     <!-- Add initial tables -->
     <include file="02-create-tables.xml" relativeToChangelogFile="true"/>
 
+    <!-- Add business rule constraints -->
+    <include file="03-add-business-constraints.xml" relativeToChangelogFile="true"/>
+
 </databaseChangeLog>

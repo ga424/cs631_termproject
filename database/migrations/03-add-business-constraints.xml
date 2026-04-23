@@ -1,0 +1,78 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="003-add-business-constraints" author="cs631">
+        <comment>Add database-level checks that mirror API validation and rental lifecycle rules</comment>
+
+        <sql>
+            UPDATE reservation
+            SET reservation_status = UPPER(reservation_status)
+            WHERE reservation_status IS NOT NULL;
+
+            ALTER TABLE reservation
+            ALTER COLUMN reservation_status SET DEFAULT 'ACTIVE';
+
+            ALTER TABLE customer
+            ADD CONSTRAINT chk_customer_exp_month
+            CHECK (exp_month BETWEEN 1 AND 12);
+
+            ALTER TABLE customer
+            ADD CONSTRAINT chk_customer_state_codes
+            CHECK (char_length(state) = 2 AND char_length(license_state) = 2);
+
+            ALTER TABLE car_class
+            ADD CONSTRAINT chk_car_class_positive_rates
+            CHECK (daily_rate &gt; 0 AND weekly_rate &gt; 0);
+
+            ALTER TABLE model
+            ADD CONSTRAINT chk_model_reasonable_year
+            CHECK (model_year BETWEEN 1980 AND 2100);
+
+            ALTER TABLE car
+            ADD CONSTRAINT chk_car_valid_vin_and_odometer
+            CHECK (char_length(vin) = 17 AND current_odometer_reading &gt;= 0);
+
+            ALTER TABLE reservation
+            ADD CONSTRAINT chk_reservation_status
+            CHECK (reservation_status IN ('ACTIVE', 'CANCELED', 'COMPLETED', 'NO_SHOW'));
+
+            ALTER TABLE reservation
+            ADD CONSTRAINT chk_reservation_date_order
+            CHECK (return_date_time_requested &gt; pickup_date_time);
+
+            ALTER TABLE rental_agreement
+            ADD CONSTRAINT chk_rental_odometer_order
+            CHECK (
+                start_odometer_reading &gt;= 0
+                AND (end_odometer_reading IS NULL OR end_odometer_reading &gt;= start_odometer_reading)
+            );
+
+            ALTER TABLE rental_agreement
+            ADD CONSTRAINT chk_rental_date_order
+            CHECK (rental_end_date_time IS NULL OR rental_end_date_time &gt;= rental_start_date_time);
+
+            ALTER TABLE rental_agreement
+            ADD CONSTRAINT chk_rental_actual_cost
+            CHECK (actual_cost IS NULL OR actual_cost &gt;= 0);
+        </sql>
+
+        <rollback>
+            ALTER TABLE rental_agreement DROP CONSTRAINT IF EXISTS chk_rental_actual_cost;
+            ALTER TABLE rental_agreement DROP CONSTRAINT IF EXISTS chk_rental_date_order;
+            ALTER TABLE rental_agreement DROP CONSTRAINT IF EXISTS chk_rental_odometer_order;
+            ALTER TABLE reservation DROP CONSTRAINT IF EXISTS chk_reservation_date_order;
+            ALTER TABLE reservation DROP CONSTRAINT IF EXISTS chk_reservation_status;
+            ALTER TABLE car DROP CONSTRAINT IF EXISTS chk_car_valid_vin_and_odometer;
+            ALTER TABLE model DROP CONSTRAINT IF EXISTS chk_model_reasonable_year;
+            ALTER TABLE car_class DROP CONSTRAINT IF EXISTS chk_car_class_positive_rates;
+            ALTER TABLE customer DROP CONSTRAINT IF EXISTS chk_customer_state_codes;
+            ALTER TABLE customer DROP CONSTRAINT IF EXISTS chk_customer_exp_month;
+            ALTER TABLE reservation ALTER COLUMN reservation_status SET DEFAULT 'active';
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
