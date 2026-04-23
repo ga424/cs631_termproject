@@ -6,6 +6,18 @@ from uuid import UUID
 from pydantic import BaseModel, Field, model_validator, field_validator, ConfigDict
 
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    username: str
+    role: str
+
+
 # Location schemas
 class LocationBase(BaseModel):
     street: str
