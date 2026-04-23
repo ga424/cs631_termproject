@@ -96,7 +96,13 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
    - Health Check: `http://localhost:8000/health`
    - Frontend Dashboard: `http://localhost:5173`
 
-6. **Seed Sample Data** (optional, for testing)
+6. **Sign in to the frontend**
+   - Agent: `agent` / `agent123`
+   - Manager: `manager` / `manager123`
+   - Admin: `admin` / `admin123`
+   - The login response is a JWT bearer token used by the frontend for protected `/api/v1/*` operational endpoints.
+
+7. **Seed Sample Data** (optional, for testing)
    ```bash
    ./start.sh seed
    ```
@@ -134,22 +140,34 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
 #### Get All Customers
 ```bash
 GET http://localhost:8000/api/v1/customers
+Authorization: Bearer {access_token}
 ```
 
 #### Get All Available Cars
 ```bash
 GET http://localhost:8000/api/v1/cars
+Authorization: Bearer {access_token}
 ```
 
 #### Fleet Operations Dashboard Summary
 ```bash
+POST http://localhost:8000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
 GET http://localhost:8000/api/v1/dashboard/overview
+Authorization: Bearer {access_token}
 ```
 
 #### Create a New Location
 ```bash
 POST http://localhost:8000/api/v1/locations
 Content-Type: application/json
+Authorization: Bearer {access_token}
 
 {
   "street": "999 Test Drive",
@@ -163,6 +181,7 @@ Content-Type: application/json
 ```bash
 POST http://localhost:8000/api/v1/reservations
 Content-Type: application/json
+Authorization: Bearer {access_token}
 
 {
   "customer_id": "{customer_uuid}",
@@ -178,6 +197,7 @@ Content-Type: application/json
 ```bash
 POST http://localhost:8000/api/v1/rental-agreements
 Content-Type: application/json
+Authorization: Bearer {access_token}
 
 {
   "reservation_id": "{reservation_uuid}",
