@@ -5,11 +5,12 @@ import math
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
+from app.core.security import require_staff
 from app.db.session import get_db
 from app.models.models import Car, RentalAgreement, Reservation
 from app.schemas import RentalAgreement as RentalAgreementSchema, RentalAgreementCreate, RentalAgreementUpdate
 
-router = APIRouter(prefix="/api/v1/rental-agreements", tags=["rental-agreements"])
+router = APIRouter(prefix="/api/v1/rental-agreements", tags=["rental-agreements"], dependencies=[Depends(require_staff)])
 
 
 def _normalize_status(status_value: str | None) -> str:
@@ -165,4 +166,3 @@ def delete_rental_agreement(contract_no: UUID, db: Session = Depends(get_db)):
     db.delete(db_agreement)
     db.commit()
     return None
-

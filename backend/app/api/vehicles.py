@@ -2,11 +2,12 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from app.core.security import require_admin, require_staff
 from app.db.session import get_db
 from app.models.models import Car
 from app.schemas import Car as CarSchema, CarCreate, CarUpdate
 
-router = APIRouter(prefix="/api/v1/cars", tags=["cars"])
+router = APIRouter(prefix="/api/v1/cars", tags=["cars"], dependencies=[Depends(require_staff)])
 
 
 @router.get("", response_model=list[CarSchema])
@@ -25,7 +26,7 @@ def get_car(vin: str, db: Session = Depends(get_db)):
     return car
 
 
-@router.post("", response_model=CarSchema, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=CarSchema, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_admin)])
 def create_car(car: CarCreate, db: Session = Depends(get_db)):
     """Create a new car"""
     db_car = Car(**car.dict())
@@ -35,7 +36,7 @@ def create_car(car: CarCreate, db: Session = Depends(get_db)):
     return db_car
 
 
-@router.put("/{vin}", response_model=CarSchema)
+@router.put("/{vin}", response_model=CarSchema, dependencies=[Depends(require_admin)])
 def update_car(vin: str, car: CarUpdate, db: Session = Depends(get_db)):
     """Update a car"""
     db_car = db.query(Car).filter(Car.vin == vin).first()
@@ -52,7 +53,7 @@ def update_car(vin: str, car: CarUpdate, db: Session = Depends(get_db)):
     return db_car
 
 
-@router.delete("/{vin}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{vin}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin)])
 def delete_car(vin: str, db: Session = Depends(get_db)):
     """Delete a car"""
     db_car = db.query(Car).filter(Car.vin == vin).first()

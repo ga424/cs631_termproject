@@ -3,11 +3,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
+from app.core.security import require_staff
 from app.db.session import get_db
 from app.models.models import Reservation
 from app.schemas import Reservation as ReservationSchema, ReservationCreate, ReservationUpdate
 
-router = APIRouter(prefix="/api/v1/reservations", tags=["reservations"])
+router = APIRouter(prefix="/api/v1/reservations", tags=["reservations"], dependencies=[Depends(require_staff)])
 
 
 @router.get("", response_model=list[ReservationSchema])
