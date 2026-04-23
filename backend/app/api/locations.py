@@ -3,11 +3,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
+from app.core.security import require_admin, require_staff
 from app.db.session import get_db
 from app.models.models import Location
 from app.schemas import Location as LocationSchema, LocationCreate, LocationUpdate
 
-router = APIRouter(prefix="/api/v1/locations", tags=["locations"])
+router = APIRouter(prefix="/api/v1/locations", tags=["locations"], dependencies=[Depends(require_staff)])
 
 
 @router.get("", response_model=list[LocationSchema])
@@ -26,7 +27,7 @@ def get_location(location_id: UUID, db: Session = Depends(get_db)):
     return location
 
 
-@router.post("", response_model=LocationSchema, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=LocationSchema, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_admin)])
 def create_location(location: LocationCreate, db: Session = Depends(get_db)):
     """Create a new location"""
     db_location = Location(**location.dict())
@@ -36,7 +37,7 @@ def create_location(location: LocationCreate, db: Session = Depends(get_db)):
     return db_location
 
 
-@router.put("/{location_id}", response_model=LocationSchema)
+@router.put("/{location_id}", response_model=LocationSchema, dependencies=[Depends(require_admin)])
 def update_location(location_id: UUID, location: LocationUpdate, db: Session = Depends(get_db)):
     """Update a location"""
     db_location = db.query(Location).filter(Location.location_id == location_id).first()
@@ -53,7 +54,7 @@ def update_location(location_id: UUID, location: LocationUpdate, db: Session = D
     return db_location
 
 
-@router.delete("/{location_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{location_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin)])
 def delete_location(location_id: UUID, db: Session = Depends(get_db)):
     """Delete a location"""
     db_location = db.query(Location).filter(Location.location_id == location_id).first()
