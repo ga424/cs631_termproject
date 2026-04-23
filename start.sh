@@ -18,6 +18,7 @@ Commands:
     logs-api        View API logs
     logs-frontend   View frontend logs
     logs-db         View database logs
+    logs-pgadmin    View pgAdmin logs
     build           Build Docker images
     rebuild         Rebuild Docker images from scratch
     ps              Show running services
@@ -34,6 +35,8 @@ Environment variables:
     DATABASE_PASSWORD   Database password (default: rental_password)
     DATABASE_NAME       Database name (default: rental_db)
     FASTAPI_ENV         FastAPI environment (default: development)
+    PGADMIN_DEFAULT_EMAIL      pgAdmin login email (default: admin@rentacar.dev)
+    PGADMIN_DEFAULT_PASSWORD   pgAdmin login password (default: admin123)
 
 Examples:
     ./start.sh up
@@ -72,6 +75,8 @@ case "${1:-help}" in
         echo -e "${GREEN}API will be available at: http://localhost:8000${NC}"
         echo -e "${GREEN}API Docs at: http://localhost:8000/docs${NC}"
         echo -e "${GREEN}Frontend will be available at: http://localhost:5173${NC}"
+        echo -e "${GREEN}pgAdmin will be available at: http://localhost:5050${NC}"
+        echo -e "${GREEN}pgAdmin login: ${PGADMIN_DEFAULT_EMAIL:-admin@rentacar.dev} / ${PGADMIN_DEFAULT_PASSWORD:-admin123}${NC}"
         ;;
     down)
         echo -e "${GREEN}Stopping all services...${NC}"
@@ -89,6 +94,9 @@ case "${1:-help}" in
         ;;
     logs-db)
         docker-compose logs -f postgres
+        ;;
+    logs-pgadmin)
+        docker-compose logs -f pgadmin
         ;;
     build)
         echo -e "${GREEN}Building Docker images...${NC}"
