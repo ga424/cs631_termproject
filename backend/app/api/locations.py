@@ -1,6 +1,7 @@
 """CRUD endpoints for rental branch locations."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from uuid import UUID
 from app.core.security import require_admin, require_staff
@@ -61,6 +62,13 @@ def delete_location(location_id: UUID, db: Session = Depends(get_db)):
     if not db_location:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Location not found")
     
-    db.delete(db_location)
-    db.commit()
+    try:
+        db.delete(db_location)
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Location has cars or reservations and cannot be deleted",
+        ) from exc
     return None

@@ -90,6 +90,32 @@ def create_rental_agreement(agreement: RentalAgreementCreate, db: Session = Depe
     if not car:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Car not found")
 
+    if car.location_id != reservation.location_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Selected car is not assigned to the reservation pickup location",
+        )
+
+    if not car.model or car.model.class_id != reservation.class_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Selected car does not match the reserved car class",
+        )
+
+    open_car_rental = (
+        db.query(RentalAgreement)
+        .filter(
+            RentalAgreement.vin == agreement.vin,
+            RentalAgreement.rental_end_date_time.is_(None),
+        )
+        .first()
+    )
+    if open_car_rental:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Selected car already has an open rental agreement",
+        )
+
     if agreement.start_odometer_reading < car.current_odometer_reading:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

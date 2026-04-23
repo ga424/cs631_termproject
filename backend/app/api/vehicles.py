@@ -1,6 +1,7 @@
 """CRUD endpoints for physical cars (identified by VIN)."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.core.security import require_admin, require_staff
 from app.db.session import get_db
@@ -60,6 +61,13 @@ def delete_car(vin: str, db: Session = Depends(get_db)):
     if not db_car:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Car not found")
     
-    db.delete(db_car)
-    db.commit()
+    try:
+        db.delete(db_car)
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Car has rental agreements and cannot be deleted",
+        ) from exc
     return None

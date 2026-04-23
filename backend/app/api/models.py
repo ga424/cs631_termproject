@@ -1,6 +1,7 @@
 """CRUD endpoints for vehicle make/model definitions."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.core.security import require_admin, require_staff
 from app.db.session import get_db
@@ -60,6 +61,13 @@ def delete_model(model_name: str, db: Session = Depends(get_db)):
     if not db_model:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found")
     
-    db.delete(db_model)
-    db.commit()
+    try:
+        db.delete(db_model)
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Model has cars and cannot be deleted",
+        ) from exc
     return None

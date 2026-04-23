@@ -1,6 +1,7 @@
 """CRUD endpoints for car-class pricing tiers."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from uuid import UUID
 from app.core.security import require_admin, require_staff
@@ -61,6 +62,13 @@ def delete_car_class(class_id: UUID, db: Session = Depends(get_db)):
     if not db_class:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Car class not found")
     
-    db.delete(db_class)
-    db.commit()
+    try:
+        db.delete(db_class)
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Car class has models or reservations and cannot be deleted",
+        ) from exc
     return None

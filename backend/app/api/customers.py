@@ -1,6 +1,7 @@
 """CRUD endpoints for customer records."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from uuid import UUID
 from app.core.security import require_staff
@@ -61,6 +62,13 @@ def delete_customer(customer_id: UUID, db: Session = Depends(get_db)):
     if not db_customer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
     
-    db.delete(db_customer)
-    db.commit()
+    try:
+        db.delete(db_customer)
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Customer has reservations and cannot be deleted",
+        ) from exc
     return None
