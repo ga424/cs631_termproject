@@ -3,11 +3,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
+from app.core.security import require_admin, require_staff
 from app.db.session import get_db
 from app.models.models import CarClass
 from app.schemas import CarClass as CarClassSchema, CarClassCreate, CarClassUpdate
 
-router = APIRouter(prefix="/api/v1/car-classes", tags=["car-classes"])
+router = APIRouter(prefix="/api/v1/car-classes", tags=["car-classes"], dependencies=[Depends(require_staff)])
 
 
 @router.get("", response_model=list[CarClassSchema])
@@ -26,7 +27,7 @@ def get_car_class(class_id: UUID, db: Session = Depends(get_db)):
     return car_class
 
 
-@router.post("", response_model=CarClassSchema, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=CarClassSchema, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_admin)])
 def create_car_class(car_class: CarClassCreate, db: Session = Depends(get_db)):
     """Create a new car class"""
     db_class = CarClass(**car_class.dict())
@@ -36,7 +37,7 @@ def create_car_class(car_class: CarClassCreate, db: Session = Depends(get_db)):
     return db_class
 
 
-@router.put("/{class_id}", response_model=CarClassSchema)
+@router.put("/{class_id}", response_model=CarClassSchema, dependencies=[Depends(require_admin)])
 def update_car_class(class_id: UUID, car_class: CarClassUpdate, db: Session = Depends(get_db)):
     """Update a car class"""
     db_class = db.query(CarClass).filter(CarClass.class_id == class_id).first()
@@ -53,7 +54,7 @@ def update_car_class(class_id: UUID, car_class: CarClassUpdate, db: Session = De
     return db_class
 
 
-@router.delete("/{class_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{class_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin)])
 def delete_car_class(class_id: UUID, db: Session = Depends(get_db)):
     """Delete a car class"""
     db_class = db.query(CarClass).filter(CarClass.class_id == class_id).first()
