@@ -116,7 +116,7 @@ class Reservation(Base):
     class_id = Column(UUID(as_uuid=True), ForeignKey("car_class.class_id"), nullable=False, index=True)
     pickup_date_time = Column(DateTime, nullable=False)
     return_date_time_requested = Column(DateTime, nullable=False)
-    reservation_status = Column(String(50), default="active", nullable=False, index=True)
+    reservation_status = Column(String(50), default="ACTIVE", nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

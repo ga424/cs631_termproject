@@ -22,7 +22,7 @@ class TokenResponse(BaseModel):
 class LocationBase(BaseModel):
     street: str
     city: str
-    state: str
+    state: str = Field(min_length=2, max_length=2)
     zip: str
 
 
@@ -33,7 +33,7 @@ class LocationCreate(LocationBase):
 class LocationUpdate(BaseModel):
     street: Optional[str] = None
     city: Optional[str] = None
-    state: Optional[str] = None
+    state: Optional[str] = Field(default=None, min_length=2, max_length=2)
     zip: Optional[str] = None
 
 
@@ -52,10 +52,10 @@ class CustomerBase(BaseModel):
     last_name: str
     street: str
     city: str
-    state: str
+    state: str = Field(min_length=2, max_length=2)
     zip: str
     license_number: str
-    license_state: str
+    license_state: str = Field(min_length=2, max_length=2)
     credit_card_type: str
     credit_card_number: str
     exp_month: int = Field(ge=1, le=12)
@@ -71,13 +71,13 @@ class CustomerUpdate(BaseModel):
     last_name: Optional[str] = None
     street: Optional[str] = None
     city: Optional[str] = None
-    state: Optional[str] = None
+    state: Optional[str] = Field(default=None, min_length=2, max_length=2)
     zip: Optional[str] = None
     license_number: Optional[str] = None
-    license_state: Optional[str] = None
+    license_state: Optional[str] = Field(default=None, min_length=2, max_length=2)
     credit_card_type: Optional[str] = None
     credit_card_number: Optional[str] = None
-    exp_month: Optional[int] = None
+    exp_month: Optional[int] = Field(default=None, ge=1, le=12)
     exp_year: Optional[int] = None
 
 
@@ -103,8 +103,8 @@ class CarClassCreate(CarClassBase):
 
 class CarClassUpdate(BaseModel):
     class_name: Optional[str] = None
-    daily_rate: Optional[float] = None
-    weekly_rate: Optional[float] = None
+    daily_rate: Optional[float] = Field(default=None, gt=0)
+    weekly_rate: Optional[float] = Field(default=None, gt=0)
 
 
 class CarClass(CarClassBase):
@@ -122,7 +122,7 @@ class ModelBase(BaseModel):
     
     model_name: str
     make_name: str
-    model_year: int
+    model_year: int = Field(ge=1980, le=2100)
     class_id: UUID
 
 
@@ -134,7 +134,7 @@ class ModelUpdate(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
     
     make_name: Optional[str] = None
-    model_year: Optional[int] = None
+    model_year: Optional[int] = Field(default=None, ge=1980, le=2100)
     class_id: Optional[UUID] = None
 
 
@@ -162,7 +162,7 @@ class CarCreate(CarBase):
 class CarUpdate(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
     
-    current_odometer_reading: Optional[int] = None
+    current_odometer_reading: Optional[int] = Field(default=None, ge=0)
     location_id: Optional[UUID] = None
     model_name: Optional[str] = None
 
@@ -205,6 +205,16 @@ class ReservationUpdate(BaseModel):
     return_date_time_requested: Optional[datetime] = None
     reservation_status: Optional[ReservationStatus] = None
 
+    @model_validator(mode="after")
+    def validate_dates_when_both_provided(self):
+        if (
+            self.pickup_date_time
+            and self.return_date_time_requested
+            and self.return_date_time_requested <= self.pickup_date_time
+        ):
+            raise ValueError("return_date_time_requested must be after pickup_date_time")
+        return self
+
 
 class Reservation(ReservationBase):
     reservation_id: UUID
@@ -245,7 +255,7 @@ class RentalAgreementCreate(RentalAgreementBase):
 class RentalAgreementUpdate(BaseModel):
     rental_end_date_time: Optional[datetime] = None
     end_odometer_reading: Optional[int] = Field(default=None, ge=0)
-    actual_cost: Optional[float] = None
+    actual_cost: Optional[float] = Field(default=None, ge=0)
 
 
 class RentalAgreement(RentalAgreementBase):
