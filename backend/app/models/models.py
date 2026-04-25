@@ -20,7 +20,7 @@ class Location(Base):
 
     # Relationships
     cars = relationship("Car", back_populates="location")
-    reservations = relationship("Reservation", back_populates="location")
+    reservations = relationship("Reservation", back_populates="location", foreign_keys="Reservation.location_id")
 
     def __repr__(self):
         return f"<Location(id={self.location_id}, city={self.city}, state={self.state})>"
@@ -133,6 +133,7 @@ class Reservation(Base):
     reservation_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     customer_id = Column(UUID(as_uuid=True), ForeignKey("customer.customer_id"), nullable=False, index=True)
     location_id = Column(UUID(as_uuid=True), ForeignKey("location.location_id"), nullable=False, index=True)
+    return_location_id = Column(UUID(as_uuid=True), ForeignKey("location.location_id"), nullable=True, index=True)
     class_id = Column(UUID(as_uuid=True), ForeignKey("car_class.class_id"), nullable=False, index=True)
     pickup_date_time = Column(DateTime, nullable=False)
     return_date_time_requested = Column(DateTime, nullable=False)
@@ -142,7 +143,8 @@ class Reservation(Base):
 
     # Relationships
     customer = relationship("Customer", back_populates="reservations")
-    location = relationship("Location", back_populates="reservations")
+    location = relationship("Location", back_populates="reservations", foreign_keys=[location_id])
+    return_location = relationship("Location", foreign_keys=[return_location_id])
     car_class = relationship("CarClass", back_populates="reservations")
     rental_agreement = relationship("RentalAgreement", back_populates="reservation", uselist=False)
     lifecycle_events = relationship("RentalLifecycleEvent", back_populates="reservation")

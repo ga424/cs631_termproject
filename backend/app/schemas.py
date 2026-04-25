@@ -199,6 +199,7 @@ ReservationStatus = Literal["ACTIVE", "CANCELED", "FULFILLED", "COMPLETED", "NO_
 class ReservationBase(BaseModel):
     customer_id: UUID
     location_id: UUID
+    return_location_id: Optional[UUID] = None
     class_id: UUID
     pickup_date_time: datetime
     return_date_time_requested: datetime
@@ -218,6 +219,7 @@ class ReservationCreate(ReservationBase):
 class ReservationUpdate(BaseModel):
     customer_id: Optional[UUID] = None
     location_id: Optional[UUID] = None
+    return_location_id: Optional[UUID] = None
     class_id: Optional[UUID] = None
     pickup_date_time: Optional[datetime] = None
     return_date_time_requested: Optional[datetime] = None
@@ -407,6 +409,7 @@ class CustomerPortalBookingRequest(BaseModel):
     exp_month: int = Field(ge=1, le=12)
     exp_year: int
     location_id: UUID
+    return_location_id: Optional[UUID] = None
     class_id: UUID
     pickup_date_time: datetime
     return_date_time_requested: datetime

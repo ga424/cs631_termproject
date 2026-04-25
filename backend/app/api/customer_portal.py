@@ -102,6 +102,7 @@ def create_customer_booking(
     reservation = Reservation(
         customer_id=customer.customer_id,
         location_id=payload.location_id,
+        return_location_id=payload.return_location_id or payload.location_id,
         class_id=payload.class_id,
         pickup_date_time=payload.pickup_date_time,
         return_date_time_requested=payload.return_date_time_requested,

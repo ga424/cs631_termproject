@@ -47,7 +47,9 @@ def create_reservation(
     db: Session = Depends(get_db),
 ):
     """Create a new reservation"""
-    db_reservation = Reservation(**reservation.dict())
+    reservation_data = reservation.dict()
+    reservation_data["return_location_id"] = reservation_data.get("return_location_id") or reservation_data["location_id"]
+    db_reservation = Reservation(**reservation_data)
     db.add(db_reservation)
     db.flush()
     record_lifecycle_event(
@@ -109,6 +111,9 @@ def update_reservation(
 
     for field, value in update_data.items():
         setattr(db_reservation, field, value)
+
+    if "location_id" in update_data and db_reservation.return_location_id is None:
+        db_reservation.return_location_id = db_reservation.location_id
 
     if requested_status in {"CANCELED", "NO_SHOW"} and requested_status != current_status:
         record_lifecycle_event(
