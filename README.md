@@ -332,6 +332,8 @@ http://localhost:8000/api/v1
 
 ### Resources
 - `POST /auth/login`
+- `POST /auth/customer-signup`
+- `GET /auth/demo-customers`
 - `GET|POST|PUT|DELETE /locations`
 - `GET|POST|PUT|DELETE /customers`
 - `GET|POST|PUT|DELETE /car-classes`
@@ -340,6 +342,7 @@ http://localhost:8000/api/v1
 - `GET|POST|PUT|DELETE /reservations`
 - `GET|POST|PUT|DELETE /rental-agreements`
 - `GET /customer-portal/catalog`
+- `GET /customer-portal/me`
 - `POST /customer-portal/bookings`
 - `GET /customer-portal/summary/{customer_id}`
 - `GET /dashboard/overview`
@@ -406,6 +409,7 @@ The database supports the full rental lifecycle across these primary entities:
 - **car_classes**: Rate cards by vehicle class
 - **models** and **cars**: Fleet catalog and specific VIN inventory
 - **customers**: Customer identity, address, driver license, and payment data
+- **customer_account**: DB-backed customer login linked 1:1 to a customer row
 - **reservations**: Pickup/return requests by customer, class, and location
 - **rental_agreements**: Active and completed contracts tied to a reservation and VIN
 
