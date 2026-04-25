@@ -15,6 +15,22 @@ const emptyDashboard = {
   upcoming_pickups: []
 };
 
+const testCustomer = {
+  customer_id: "00000000-0000-0000-0000-000000000001",
+  first_name: "Demo",
+  last_name: "Customer",
+  street: "20 Market St",
+  city: "Newark",
+  state: "NJ",
+  zip: "07102",
+  license_number: "NJ-DEMO-1",
+  license_state: "NJ",
+  credit_card_type: "Visa",
+  credit_card_number: "4111111111111111",
+  exp_month: 12,
+  exp_year: 2028
+};
+
 async function signInAs(page, role) {
   await page.route("**/api/v1/auth/login", async (route) => {
     await route.fulfill({
@@ -23,7 +39,9 @@ async function signInAs(page, role) {
         access_token: `test-token-${role}`,
         token_type: "bearer",
         username: role,
-        role
+        role,
+        customer_id: role === "customer" ? testCustomer.customer_id : null,
+        account_id: role === "customer" ? "00000000-0000-0000-0000-000000000011" : null
       })
     });
   });
@@ -34,6 +52,31 @@ async function signInAs(page, role) {
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({ locations: [], car_classes: [], workflow: [] })
+    });
+  });
+  await page.route("**/api/v1/customer-portal/me", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        customer: testCustomer,
+        reservations: [],
+        active_rentals: [],
+        workflow: []
+      })
+    });
+  });
+  await page.route("**/api/v1/auth/demo-customers", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify([{
+        customer_id: testCustomer.customer_id,
+        username: "john.doe",
+        display_name: "John Doe",
+        home_branch: "Newark, NJ",
+        trip_status: "Ready to book",
+        reservation_count: 0,
+        active_rental_count: 0
+      }])
     });
   });
   await page.route("**/api/v1/**", async (route) => {

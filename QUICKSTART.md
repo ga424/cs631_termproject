@@ -75,12 +75,13 @@ You can now test the API at http://localhost:8000/docs
 1. Open `http://localhost:5173`
 2. Choose a persona card
 3. Sign in with one of the demo credentials:
-   - Customer: `customer` / `customer123`
+   - Customer: select a seeded customer card, or use `john.doe` / `customer123`
    - Agent: `agent` / `agent123`
    - Manager: `manager` / `manager123`
    - Admin: `admin` / `admin123`
    - These credentials are for local development/demo use only.
-4. Verify you are routed into the matching persona workspace
+4. Use **Create a customer account** on the landing page to create a new customer login linked to a new customer record.
+5. Verify you are routed into the matching persona workspace.
 
 ## Step 3B: Test the API
 
@@ -147,9 +148,12 @@ curl -X POST http://localhost:8000/api/v1/locations \
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"customer","password":"customer123"}'
+  -d '{"username":"john.doe","password":"customer123"}'
 
 curl http://localhost:8000/api/v1/customer-portal/catalog \
+  -H "Authorization: Bearer {access_token}"
+
+curl http://localhost:8000/api/v1/customer-portal/me \
   -H "Authorization: Bearer {access_token}"
 ```
 
@@ -183,6 +187,8 @@ curl http://localhost:8000/api/v1/customer-portal/catalog \
 - Emily Williams (TX)
 - Michael Brown (AZ)
 
+Seeded customer login usernames are generated as lowercase first/last names, for example `john.doe`, `jane.smith`, and `robert.johnson`. All seeded customer demo accounts use the development-only password `customer123`.
+
 ### Sample Reservations & Rental Agreements
 - Various active and completed rentals
 - Different vehicle classes
@@ -195,6 +201,8 @@ curl http://localhost:8000/api/v1/customer-portal/catalog \
 - `GET /health` - Health check
 - `GET /api/v1` - API version and endpoints
 - `POST /api/v1/auth/login` - Obtain JWT bearer token
+- `POST /api/v1/auth/customer-signup` - Create a customer plus linked customer login
+- `GET /api/v1/auth/demo-customers` - List safe seeded customer demo login choices
 
 ### Resource Management
 - **Locations**: `/api/v1/locations`

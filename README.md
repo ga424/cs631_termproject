@@ -112,10 +112,11 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
      - `http://localhost:5173/admin`
 
 6. **Sign in to the frontend**
-   - Customer: `customer` / `customer123`
+   - Customer: select a seeded customer card, or use `john.doe` / `customer123`
    - Agent: `agent` / `agent123`
    - Manager: `manager` / `manager123`
    - Admin: `admin` / `admin123`
+   - Seeded customer accounts are DB-backed and linked 1:1 to customer records. Staff demo accounts remain environment-backed.
    - These are development/demo credentials only. The login response is a JWT bearer token used by the frontend for protected `/api/v1/*` endpoints.
 
 7. **Seed Sample Data** (optional, for testing)
@@ -128,6 +129,7 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
    - 8 vehicle models
    - 10 individual vehicles (cars/SUVs)
    - 5 sample customers
+   - 5 DB-backed seeded customer login accounts
    - 5 reservations
    - 3 rental agreements
 
@@ -190,11 +192,14 @@ POST http://localhost:8000/api/v1/auth/login
 Content-Type: application/json
 
 {
-  "username": "customer",
+  "username": "john.doe",
   "password": "customer123"
 }
 
 GET http://localhost:8000/api/v1/customer-portal/catalog
+Authorization: Bearer {access_token}
+
+GET http://localhost:8000/api/v1/customer-portal/me
 Authorization: Bearer {access_token}
 ```
 
