@@ -104,7 +104,8 @@ export function CustomerPortal() {
             <div className="surface-head">
               <div>
                 <p className="eyebrow">Reserve A Car</p>
-                <h2>Book a reservation</h2>
+                <h2>Reservation Journey</h2>
+                <p>Confirm your profile, choose the trip details, then track this reservation from My Trip.</p>
               </div>
               <button type="button" className="ghost-button" onClick={() => setBookingOpen(false)}>Close</button>
             </div>
