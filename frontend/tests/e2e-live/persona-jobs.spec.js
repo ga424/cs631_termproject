@@ -34,6 +34,7 @@ async function signUpCustomer(page) {
   const password = "customer123";
 
   await page.goto("/");
+  await page.getByRole("button", { name: /register new customer/i }).click();
   await page.getByPlaceholder("Username").fill(username);
   await page.getByPlaceholder("Password").fill(password);
   await fillCustomerFields(page, "Customer");
@@ -64,6 +65,7 @@ test("customer can book and track a reservation", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/customer$/);
   await expect(page.getByRole("heading", { name: /customer portal/i })).toBeVisible();
+  await page.getByRole("button", { name: /reserve a car/i }).click();
   await fillCustomerFields(page, "Customer");
   await page.getByRole("combobox").nth(0).selectOption({ index: 1 });
   await page.getByRole("combobox").nth(1).selectOption({ index: 1 });
@@ -80,10 +82,12 @@ test("agent can intake, start pickup, and close a rental", async ({ page }) => {
   await signInAs(page, "agent");
 
   await page.getByRole("button", { name: /^intake$/i }).click();
+  await page.getByRole("button", { name: /^create customer$/i }).click();
   await fillCustomerFields(page, "Agent");
   await page.getByRole("button", { name: /save customer/i }).click();
   await expect(page.getByText(/customer created/i)).toBeVisible();
 
+  await page.getByRole("button", { name: /^create reservation$/i }).click();
   await page.getByRole("combobox").nth(0).selectOption({ index: 1 });
   await page.getByRole("combobox").nth(1).selectOption({ index: 1 });
   await page.getByRole("combobox").nth(2).selectOption({ index: 1 });
@@ -129,32 +133,36 @@ test("admin can manage pricing and fleet with delete confirmation guarded", asyn
   await signInAs(page, "admin");
 
   await page.getByRole("button", { name: /^pricing$/i }).click();
+  await page.getByRole("button", { name: /^add class$/i }).click();
   await page.getByPlaceholder("Class name").fill(`Live-${stamp}`);
   await page.getByPlaceholder("Daily rate").fill("88");
   await page.getByPlaceholder("Weekly rate").fill("440");
-  await page.getByRole("button", { name: /add class/i }).click();
+  await page.getByRole("button", { name: /save class/i }).click();
   await expect(page.getByText(/car class created/i)).toBeVisible();
 
+  await page.getByRole("button", { name: /^add model$/i }).click();
   await page.getByPlaceholder("Model name").fill(`Model-${stamp}`);
   await page.getByPlaceholder("Make").fill("Milan");
   await page.getByPlaceholder("Model year").fill("2026");
   await page.getByRole("combobox").selectOption({ label: `Live-${stamp}` });
-  await page.getByRole("button", { name: /add model/i }).click();
+  await page.getByRole("button", { name: /save model/i }).click();
   await expect(page.getByText(/model created/i)).toBeVisible();
 
   await page.getByRole("button", { name: /^fleet$/i }).click();
+  await page.getByRole("button", { name: /^add location$/i }).click();
   await page.getByPlaceholder("Street").fill("88 Admin Ave");
   await page.getByPlaceholder("City").fill(`Admin${stamp}`);
   await page.getByPlaceholder("State").fill("NJ");
   await page.getByPlaceholder("ZIP").fill("07103");
-  await page.getByRole("button", { name: /add location/i }).click();
+  await page.getByRole("button", { name: /save location/i }).click();
   await expect(page.getByText(/location created/i)).toBeVisible();
 
+  await page.getByRole("button", { name: /^register car$/i }).click();
   await page.getByPlaceholder("VIN").fill(`LV${stamp}ABCDEF1`);
   await page.getByPlaceholder("Current odometer").fill("25");
   await page.getByRole("combobox").nth(0).selectOption({ label: `Admin${stamp}, NJ` });
   await page.getByRole("combobox").nth(1).selectOption({ label: `Milan Model-${stamp}` });
-  await page.getByRole("button", { name: /register car/i }).click();
+  await page.getByRole("button", { name: /save car/i }).click();
   await expect(page.getByText(/car added to fleet/i)).toBeVisible();
 
   page.once("dialog", async (dialog) => {

@@ -73,6 +73,7 @@ async function signInAs(page, role) {
         username: "john.doe",
         display_name: "John Doe",
         home_branch: "Newark, NJ",
+        is_active: true,
         trip_status: "Ready to book",
         reservation_count: 0,
         active_rental_count: 0
