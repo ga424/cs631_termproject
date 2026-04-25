@@ -25,6 +25,7 @@ class CustomerDemoAccount(BaseModel):
     username: str
     display_name: str
     home_branch: Optional[str] = None
+    is_active: bool
     trip_status: str
     reservation_count: int
     active_rental_count: int

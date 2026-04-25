@@ -105,7 +105,6 @@ def list_demo_customers(db: Session = Depends(get_db)):
     accounts = (
         db.query(CustomerAccount)
         .join(Customer, CustomerAccount.customer_id == Customer.customer_id)
-        .filter(CustomerAccount.is_active.is_(True))
         .order_by(Customer.last_name.asc(), Customer.first_name.asc())
         .all()
     )
@@ -121,13 +120,22 @@ def list_demo_customers(db: Session = Depends(get_db)):
             .all()
         )
         active_reservations = [item for item in reservations if item.reservation_status == "ACTIVE"]
-        trip_status = "Active rental" if active_rentals else "Upcoming reservation" if active_reservations else "Ready to book"
+        trip_status = (
+            "Inactive account"
+            if not account.is_active
+            else "Active rental"
+            if active_rentals
+            else "Upcoming reservation"
+            if active_reservations
+            else "Ready to book"
+        )
         demo_accounts.append(
             CustomerDemoAccount(
                 customer_id=customer.customer_id,
                 username=account.username,
                 display_name=f"{customer.first_name} {customer.last_name}",
                 home_branch=f"{customer.city}, {customer.state}",
+                is_active=account.is_active,
                 trip_status=trip_status,
                 reservation_count=len(reservations),
                 active_rental_count=len(active_rentals),
