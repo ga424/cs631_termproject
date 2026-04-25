@@ -19,6 +19,9 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
 ├── backend/                          # FastAPI application
 │   ├── app/
 │   │   ├── api/                     # API route handlers
+│   │   │   ├── auth.py              # JWT login endpoint
+│   │   │   ├── customer_portal.py   # Customer self-service booking/trip endpoints
+│   │   │   ├── dashboard.py         # Staff dashboard metrics
 │   │   │   ├── locations.py         # Location endpoints
 │   │   │   ├── customers.py         # Customer endpoints
 │   │   │   ├── car_classes.py       # Car class endpoints
@@ -94,13 +97,14 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
    - Swagger UI: `http://localhost:8000/docs`
    - ReDoc: `http://localhost:8000/redoc`
    - Health Check: `http://localhost:8000/health`
-   - Frontend Dashboard: `http://localhost:5173`
+   - Frontend Mobile UI: `http://localhost:5173`
 
 6. **Sign in to the frontend**
+   - Customer: `customer` / `customer123`
    - Agent: `agent` / `agent123`
    - Manager: `manager` / `manager123`
    - Admin: `admin` / `admin123`
-   - The login response is a JWT bearer token used by the frontend for protected `/api/v1/*` operational endpoints.
+   - The login response is a JWT bearer token used by the frontend for protected `/api/v1/*` endpoints.
 
 7. **Seed Sample Data** (optional, for testing)
    ```bash
@@ -129,7 +133,12 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
    ./start.sh seed
    ```
 
-3. **Try API Endpoints**
+3. **Authorize Once**
+   - Click `Authorize`
+   - Paste the JWT returned by `POST /api/v1/auth/login`
+   - Swagger is configured for Bearer auth, so paste only the token value
+
+4. **Try API Endpoints**
    - Click on any endpoint to expand it
    - Click "Try it out"
    - Modify parameters if needed
@@ -160,6 +169,20 @@ Content-Type: application/json
 }
 
 GET http://localhost:8000/api/v1/dashboard/overview
+Authorization: Bearer {access_token}
+```
+
+#### Customer Self-Service Booking
+```bash
+POST http://localhost:8000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "customer",
+  "password": "customer123"
+}
+
+GET http://localhost:8000/api/v1/customer-portal/catalog
 Authorization: Bearer {access_token}
 ```
 
@@ -261,8 +284,8 @@ curl http://localhost:8000/api/v1
 # Seed database with sample test data
 ./start.sh seed
 
-# Run end-to-end dashboard UI test (clicks Load Dashboard)
-./start.sh e2e-dashboard
+# Run end-to-end mobile UI test
+./start.sh e2e-ui
 
 # Run Trivy security scan
 ./start.sh scan
@@ -282,6 +305,7 @@ http://localhost:8000/api/v1
 ```
 
 ### Resources
+- `POST /auth/login`
 - `GET|POST|PUT|DELETE /locations`
 - `GET|POST|PUT|DELETE /customers`
 - `GET|POST|PUT|DELETE /car-classes`
@@ -289,6 +313,9 @@ http://localhost:8000/api/v1
 - `GET|POST|PUT|DELETE /cars`
 - `GET|POST|PUT|DELETE /reservations`
 - `GET|POST|PUT|DELETE /rental-agreements`
+- `GET /customer-portal/catalog`
+- `POST /customer-portal/bookings`
+- `GET /customer-portal/summary/{customer_id}`
 - `GET /dashboard/overview`
 
 ## CI/CD And Coverage
@@ -320,15 +347,19 @@ docker-compose run --rm api pytest
 ## Database
 
 ### Schema
-The database includes three main tables:
-- **vehicles**: Vehicle inventory
-- **customers**: Customer information
-- **rentals**: Rental records with relationships to vehicles and customers
+The database supports the full rental lifecycle across these primary entities:
+- **locations**: Branch pickup and return sites
+- **car_classes**: Rate cards by vehicle class
+- **models** and **cars**: Fleet catalog and specific VIN inventory
+- **customers**: Customer identity, address, driver license, and payment data
+- **reservations**: Pickup/return requests by customer, class, and location
+- **rental_agreements**: Active and completed contracts tied to a reservation and VIN
 
 ### Liquibase Migrations
 Database schema is managed through Liquibase XML changesets:
 - `01-init-schema.xml`: Creates extensions, functions, and triggers
 - `02-create-tables.xml`: Defines table structures with constraints and indexes
+- `03-add-business-constraints.xml`: Adds lifecycle, pricing, and data validation constraints
 
 ### Running Migrations
 Migrations run automatically on service startup via `liquibase` container. To run manually:

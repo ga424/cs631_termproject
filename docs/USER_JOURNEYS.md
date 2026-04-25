@@ -7,9 +7,11 @@ This document maps user workflows directly to the official CS631 RentACar requir
 - **Service Agent:** signs in with JWT credentials and handles customer intake, phone reservations, walk-ins, pickup rental agreements, cancellation/no-show updates, returns, and billing.
 - **Branch Manager:** signs in with JWT credentials and reviews operational dashboard metrics for fleet availability, active rentals, overdue rentals, upcoming pickups, utilization, and rates.
 - **Administrator:** signs in with JWT credentials and can perform all service-agent and manager workflows plus inventory/pricing administration for locations, car classes, models, and cars.
+- **Customer:** signs in with JWT credentials and uses the self-service mobile portal to browse the catalog, place a reservation, and monitor reservation/rental status.
 
-### Demo Staff Credentials
+### Demo Credentials
 
+- Customer: `customer` / `customer123`
 - Agent: `agent` / `agent123`
 - Manager: `manager` / `manager123`
 - Admin: `admin` / `admin123`

@@ -25,7 +25,8 @@ Commands:
     clean           Remove containers, volumes, and networks
     migrate         Run Liquibase migrations only
     seed            Seed database with sample test data
-    e2e-dashboard   Seed DB and run frontend dashboard E2E test
+    e2e-dashboard   Backward-compatible alias for the mobile UI E2E test
+    e2e-ui          Seed DB and run frontend mobile UI E2E test
     scan            Run Trivy security scan
     test            Run backend tests with coverage
     help            Show this help message
@@ -129,13 +130,13 @@ case "${1:-help}" in
         docker-compose exec -T api python seed_data.py
         echo -e "${GREEN}Database seeded successfully!${NC}"
         ;;
-    e2e-dashboard)
+    e2e-dashboard|e2e-ui)
         # Validates the UI click flow using real seeded backend data.
         echo -e "${GREEN}Ensuring services are up...${NC}"
         docker-compose up -d --build
         echo -e "${GREEN}Seeding database with sample data...${NC}"
         docker-compose exec -T api python seed_data.py
-        echo -e "${GREEN}Running dashboard E2E test...${NC}"
+        echo -e "${GREEN}Running mobile UI E2E test...${NC}"
         (cd frontend && npm install && npx playwright install chromium && npm run test:e2e)
         ;;
     scan)

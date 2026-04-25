@@ -63,26 +63,36 @@ You can now test the API at http://localhost:8000/docs
 
 ### Option A: Interactive Swagger UI (Recommended)
 1. Open browser: **http://localhost:8000/docs**
-2. You'll see all available endpoints
-3. Click on any endpoint to expand it
-4. Click "Try it out"
-5. Click "Execute" to test
+2. Run `POST /api/v1/auth/login`
+3. Copy the `access_token` value from the response
+4. Click **Authorize** and paste only the JWT token value
+5. Open any protected endpoint, click **Try it out**, then **Execute**
 
 ### Option B: Command Line (cURL)
 
+**Log in for a JWT first:**
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}'
+```
+
 **List all customers:**
 ```bash
-curl http://localhost:8000/api/v1/customers
+curl http://localhost:8000/api/v1/customers \
+  -H "Authorization: Bearer {access_token}"
 ```
 
 **List all cars:**
 ```bash
-curl http://localhost:8000/api/v1/cars
+curl http://localhost:8000/api/v1/cars \
+  -H "Authorization: Bearer {access_token}"
 ```
 
 **List all reservations:**
 ```bash
-curl http://localhost:8000/api/v1/reservations
+curl http://localhost:8000/api/v1/reservations \
+  -H "Authorization: Bearer {access_token}"
 ```
 
 **Get API health status:**
@@ -101,12 +111,23 @@ curl http://localhost:8000/api/v1
 ```bash
 curl -X POST http://localhost:8000/api/v1/locations \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {access_token}" \
   -d '{
     "street": "999 Test Drive",
     "city": "Denver",
     "state": "CO",
     "zip": "80202"
   }'
+```
+
+**Example: Customer self-service catalog**
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"customer","password":"customer123"}'
+
+curl http://localhost:8000/api/v1/customer-portal/catalog \
+  -H "Authorization: Bearer {access_token}"
 ```
 
 ## Sample Data Included
@@ -150,6 +171,7 @@ curl -X POST http://localhost:8000/api/v1/locations \
 - `GET /` - Welcome message
 - `GET /health` - Health check
 - `GET /api/v1` - API version and endpoints
+- `POST /api/v1/auth/login` - Obtain JWT bearer token
 
 ### Resource Management
 - **Locations**: `/api/v1/locations`
@@ -159,6 +181,8 @@ curl -X POST http://localhost:8000/api/v1/locations \
 - **Cars**: `/api/v1/cars`
 - **Reservations**: `/api/v1/reservations`
 - **Rental Agreements**: `/api/v1/rental-agreements`
+- **Customer Portal**: `/api/v1/customer-portal`
+- **Dashboard**: `/api/v1/dashboard/overview`
 
 ### All Resources Support
 - `GET /resource` - List all
@@ -243,10 +267,9 @@ lsof -i :8000
 ## Next Steps
 
 - Explore the Swagger documentation: http://localhost:8000/docs
-- Test all CRUD operations
-- Create realistic business workflows
-- Implement business logic for rental calculations
-- Add authentication/authorization as needed
+- Sign in through the mobile-first frontend at `http://localhost:5173`
+- Test customer, agent, manager, and admin personas
+- Review workflow mapping in `docs/BPMN_WORKFLOWS.md`
 
 ---
 
