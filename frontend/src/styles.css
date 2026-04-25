@@ -704,6 +704,16 @@ select {
   box-shadow: inset 4px 0 0 var(--accent);
 }
 
+.vehicle-option-card.unavailable {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--surface-soft) 78%, #fff);
+  opacity: 0.72;
+}
+
+.vehicle-option-card.unavailable input {
+  cursor: not-allowed;
+}
+
 .vehicle-card-main,
 .vehicle-card-rate {
   display: grid;

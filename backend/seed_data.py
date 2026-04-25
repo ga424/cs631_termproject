@@ -85,6 +85,20 @@ SAMPLE_VEHICLE_CATALOG = [
     ("Passenger Van", "Ford Transit 12-Passenger Van RWD", "Ford", 2024, 109.29, 688.53, "SAMPLEVIN00000015"),
 ]
 
+UNAVAILABLE_VEHICLE_CATALOG = [
+    ("Intermediate Elite Electric", "Tesla Long Range Model 3", "Tesla", 2024, 72.25, 455.18),
+    ("Midsize Electric Long Range", "Tesla Short Range Model 3", "Tesla", 2024, 68.40, 430.92),
+    ("Full-Size SUV", "GMC Yukon Denali", "GMC", 2024, 96.80, 609.84),
+    ("Premium SUV", "Ford Expedition Max", "Ford", 2024, 108.50, 683.55),
+    ("Signature Series", "Cadillac XT6", "Cadillac", 2024, 118.75, 748.13),
+    ("Standard Sport", "Ford Mustang Coupe", "Ford", 2024, 74.20, 467.46),
+    ("Convertible", "Ford Mustang Convertible", "Ford", 2024, 89.95, 566.69),
+    ("Premium Elite SUV", "Lincoln Navigator", "Lincoln", 2024, 132.10, 832.23),
+    ("Premium Crossover", "Mercedes-Benz GLA 250", "Mercedes-Benz", 2024, 92.70, 584.01),
+    ("Luxury Elite EV Long Range", "Genesis G80E", "Genesis", 2024, 126.40, 796.32),
+    ("Standard Elite Sport", "Mercedes-Benz C300", "Mercedes-Benz", 2024, 84.65, 533.30),
+]
+
 
 def preferred_demo_username(customer):
     """Return a stable demo username for known seeded users, else a normalized fallback."""
@@ -290,6 +304,29 @@ def ensure_sample_vehicle_catalog(session):
                 location_id=locations[index % len(locations)].location_id,
                 model_name=actual_model_name,
             ))
+
+    for class_name, model_name, make_name, model_year, daily_rate, weekly_rate in UNAVAILABLE_VEHICLE_CATALOG:
+        car_class = session.query(CarClass).filter(CarClass.class_name == class_name).first()
+        if car_class is None:
+            car_class = CarClass(class_name=class_name, daily_rate=daily_rate, weekly_rate=weekly_rate)
+            session.add(car_class)
+            session.flush()
+        else:
+            car_class.daily_rate = daily_rate
+            car_class.weekly_rate = weekly_rate
+
+        model = session.query(Model).filter(Model.model_name == model_name).first()
+        if model is None:
+            session.add(Model(
+                model_name=model_name,
+                make_name=make_name,
+                model_year=model_year,
+                class_id=car_class.class_id,
+            ))
+        else:
+            model.make_name = make_name
+            model.model_year = model_year
+            model.class_id = car_class.class_id
 
     session.commit()
 

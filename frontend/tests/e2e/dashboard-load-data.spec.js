@@ -51,7 +51,25 @@ async function signInAs(page, role) {
   await page.route("**/api/v1/customer-portal/catalog", async (route) => {
     await route.fulfill({
       contentType: "application/json",
-      body: JSON.stringify({ locations: [], car_classes: [], vehicle_options: [], workflow: [] })
+      body: JSON.stringify({
+        locations: [],
+        car_classes: [],
+        vehicle_options: [{
+          class_id: "00000000-0000-0000-0000-000000000201",
+          class_name: "Convertible",
+          similar_model: "Ford Mustang Convertible or Similar",
+          seats: 4,
+          doors: 2,
+          bags: 1,
+          daily_rate: 89.95,
+          weekly_rate: 566.69,
+          rate_badge: "Discounted Rate",
+          upgrade_badge: null,
+          available_count: 0,
+          is_available: false
+        }],
+        workflow: []
+      })
     });
   });
   await page.route("**/api/v1/customer-portal/me", async (route) => {

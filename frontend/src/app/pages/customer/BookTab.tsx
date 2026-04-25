@@ -135,14 +135,17 @@ export function BookTab({
             weekly_rate: item.weekly_rate,
             rate_badge: "Standard Rate",
             upgrade_badge: null,
+            available_count: 1,
+            is_available: true,
           }))).map((option) => (
-            <label key={option.class_id} className={`vehicle-option-card ${form.class_id === option.class_id ? "selected" : ""}`}>
+            <label key={option.class_id} className={`vehicle-option-card ${form.class_id === option.class_id ? "selected" : ""} ${option.is_available ? "" : "unavailable"}`}>
               <input
                 type="radio"
                 name="class_id"
                 value={option.class_id}
                 checked={form.class_id === option.class_id}
                 onChange={(e) => onChange({ ...form, class_id: e.target.value })}
+                disabled={!option.is_available}
                 required
               />
               <span className="vehicle-card-main">
@@ -151,9 +154,9 @@ export function BookTab({
                 <em>{option.seats} seats · {option.doors} doors · {option.bags} bags</em>
               </span>
               <span className="vehicle-card-rate">
-                <small>{option.upgrade_badge || "Coupon does not apply"}</small>
-                <strong>{formatCurrency(option.daily_rate)}/day</strong>
-                <em>{option.rate_badge}</em>
+                <small>{option.is_available ? option.upgrade_badge || "Coupon does not apply" : "Out of stock"}</small>
+                <strong>{option.is_available ? `${formatCurrency(option.daily_rate)}/day` : "Unavailable"}</strong>
+                <em>{option.is_available ? `${option.rate_badge} · ${option.available_count} available` : option.class_name}</em>
               </span>
             </label>
           ))}

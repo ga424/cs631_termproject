@@ -401,6 +401,8 @@ class CustomerPortalCatalog(BaseModel):
         weekly_rate: float
         rate_badge: str
         upgrade_badge: Optional[str] = None
+        available_count: int
+        is_available: bool
 
     locations: list[Location]
     car_classes: list[CarClass]

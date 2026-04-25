@@ -7,7 +7,7 @@ from uuid import UUID
 from app.core.lifecycle import record_lifecycle_event
 from app.core.security import StaffPrincipal, require_authenticated, require_customer, require_staff
 from app.db.session import get_db
-from app.models.models import CarClass, Customer, Location, RentalAgreement, RentalLifecycleEvent, Reservation
+from app.models.models import Car, CarClass, Customer, Location, RentalAgreement, RentalLifecycleEvent, Reservation
 from app.schemas import (
     CustomerPortalBookingRequest,
     CustomerPortalBookingResponse,
@@ -56,21 +56,32 @@ CUSTOMER_WORKFLOW = [
 ]
 
 CATALOG_CAPACITY = {
+    "Convertible": (4, 2, 1),
     "15-Passenger Van": (15, 4, 1),
     "Compact": (5, 4, 1),
     "Economy": (5, 4, 1),
     "Full-Size": (5, 4, 2),
+    "Full-Size SUV": (7, 4, 3),
     "Full-Size Pickup": (5, 4, 5),
     "Intermediate": (5, 4, 1),
+    "Intermediate Elite Electric": (5, 4, 2),
     "Intermediate Electric": (5, 4, 1),
     "Intermediate SUV": (5, 4, 1),
     "Luxury": (5, 4, 2),
+    "Luxury Elite EV Long Range": (5, 4, 2),
+    "Midsize Electric Long Range": (5, 4, 1),
     "Minivan": (7, 4, 2),
     "Passenger Van": (12, 4, 2),
     "Premium": (5, 4, 2),
+    "Premium Crossover": (5, 4, 2),
+    "Premium Elite SUV": (7, 4, 3),
+    "Premium SUV": (7, 4, 3),
+    "Signature Series": (7, 4, 2),
     "Standard": (5, 4, 1),
     "Standard Elite Electric": (5, 4, 1),
     "Standard Elite SUV": (7, 4, 1),
+    "Standard Elite Sport": (5, 4, 2),
+    "Standard Sport": (4, 2, 1),
     "Standard SUV": (5, 4, 1),
 }
 
@@ -78,10 +89,21 @@ CATALOG_CAPACITY = {
 @router.get("/catalog", response_model=CustomerPortalCatalog)
 def get_customer_catalog(db: Session = Depends(get_db)):
     car_classes = db.query(CarClass).all()
+    active_vins = {
+        rental.vin
+        for rental in db.query(RentalAgreement).filter(RentalAgreement.rental_end_date_time.is_(None)).all()
+    }
     options = []
     for car_class in car_classes:
         seats, doors, bags = CATALOG_CAPACITY.get(car_class.class_name, (5, 4, 1))
         similar_model = car_class.models[0].model_name if car_class.models else car_class.class_name
+        cars_for_class = (
+            db.query(Car)
+            .join(Car.model)
+            .filter_by(class_id=car_class.class_id)
+            .all()
+        )
+        available_count = sum(1 for car in cars_for_class if car.vin not in active_vins)
         options.append(
             CustomerPortalCatalog.CustomerPortalVehicleOption(
                 class_id=car_class.class_id,
@@ -94,9 +116,11 @@ def get_customer_catalog(db: Session = Depends(get_db)):
                 weekly_rate=float(car_class.weekly_rate),
                 rate_badge="Discounted Rate",
                 upgrade_badge="Free Upgrade Eligible" if car_class.class_name in {"Full-Size", "Intermediate", "Standard"} else None,
+                available_count=available_count,
+                is_available=available_count > 0,
             )
         )
-    options.sort(key=lambda item: (item.daily_rate, item.class_name))
+    options.sort(key=lambda item: (not item.is_available, item.daily_rate, item.class_name))
 
     return CustomerPortalCatalog(
         locations=db.query(Location).all(),
