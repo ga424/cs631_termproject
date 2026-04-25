@@ -408,6 +408,7 @@ For visual workflow and architecture references:
 - `docs/C4_ARCHITECTURE.md` (C4 context/container/component/deployment)
 - `docs/DATABASE_ERD.md` (entity relationship model)
 - `docs/USER_JOURNEYS.md` (user journey flowchart, sequence, and lifecycle diagrams)
+- `docs/BPMN_WORKFLOWS.md` (mobile-first workflow mapping between roles, UI surfaces, and API touchpoints)
 
 ## User Journey Mapping
 
