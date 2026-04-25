@@ -30,6 +30,43 @@ DEMO_ACCOUNT_BY_NAME = {
     ("michael", "brown"): "michael.brown",
 }
 
+INACTIVE_DEMO_CUSTOMERS = [
+    {
+        "username": "nina.nohistory",
+        "customer": {
+            "first_name": "Nina",
+            "last_name": "Nohistory",
+            "street": "710 Demo Plaza",
+            "city": "Newark",
+            "state": "NJ",
+            "zip": "07102",
+            "license_number": "D2234567",
+            "license_state": "NJ",
+            "credit_card_type": "Visa",
+            "credit_card_number": "4111111111111111",
+            "exp_month": 11,
+            "exp_year": 2028,
+        },
+    },
+    {
+        "username": "omar.inactive",
+        "customer": {
+            "first_name": "Omar",
+            "last_name": "Inactive",
+            "street": "810 Account Way",
+            "city": "Hoboken",
+            "state": "NJ",
+            "zip": "07030",
+            "license_number": "D2234568",
+            "license_state": "NJ",
+            "credit_card_type": "MasterCard",
+            "credit_card_number": "5555555555554444",
+            "exp_month": 10,
+            "exp_year": 2029,
+        },
+    },
+]
+
 
 def preferred_demo_username(customer):
     """Return a stable demo username for known seeded users, else a normalized fallback."""
@@ -82,6 +119,18 @@ def print_demo_credentials(session):
         print("\nAdditional customer accounts present:")
         for account, customer in additional:
             print(f"   - {customer.first_name} {customer.last_name}: {account.username}")
+
+    inactive_rows = (
+        session.query(CustomerAccount, Customer)
+        .join(Customer, CustomerAccount.customer_id == Customer.customer_id)
+        .filter(CustomerAccount.is_active.is_(False))
+        .order_by(Customer.last_name.asc(), Customer.first_name.asc())
+        .all()
+    )
+    if inactive_rows:
+        print("\nInactive no-booking demo accounts:")
+        for account, customer in inactive_rows:
+            print(f"   - {customer.first_name} {customer.last_name}: {account.username} (login disabled)")
 
 
 def print_seeded_customer_account_snapshot(session):
@@ -154,6 +203,33 @@ def ensure_customer_accounts(session, customers):
     print_demo_summary(session)
 
 
+def ensure_inactive_demo_customers(session):
+    """Create inactive customer accounts with no reservations for account-state demos."""
+    print("  - Ensuring inactive no-booking customer accounts...")
+    for record in INACTIVE_DEMO_CUSTOMERS:
+        data = record["customer"]
+        customer = session.query(Customer).filter(Customer.license_number == data["license_number"]).first()
+        if customer is None:
+            customer = Customer(**data)
+            session.add(customer)
+            session.flush()
+
+        account = session.query(CustomerAccount).filter(CustomerAccount.customer_id == customer.customer_id).first()
+        if account is None:
+            account = CustomerAccount(
+                customer_id=customer.customer_id,
+                username=normalize_username(record["username"]),
+                password_hash=hash_password(DEMO_CUSTOMER_PASSWORD),
+                is_active=False,
+            )
+            session.add(account)
+        else:
+            account.username = normalize_username(record["username"])
+            account.is_active = False
+
+    session.commit()
+
+
 def create_engine_and_session():
     """Create database engine and session"""
     engine = create_engine(settings.database_url, pool_pre_ping=True)
@@ -172,6 +248,8 @@ def seed_database():
         if existing_locations > 0:
             customers = session.query(Customer).all()
             ensure_customer_accounts(session, customers)
+            ensure_inactive_demo_customers(session)
+            print_demo_summary(session)
             print("Sample data already exists in database. Skipping seed.")
             return
         
@@ -294,6 +372,8 @@ def seed_database():
         session.add_all(customers)
         session.commit()
         ensure_customer_accounts(session, customers)
+        ensure_inactive_demo_customers(session)
+        print_demo_summary(session)
         
         # Create Reservations
         print("  - Adding reservations...")
