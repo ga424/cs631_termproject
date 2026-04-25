@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
 
-from app.core.security import require_authenticated
+from app.core.security import StaffPrincipal, require_authenticated, require_customer, require_staff
 from app.db.session import get_db
 from app.models.models import CarClass, Customer, Location, RentalAgreement, Reservation
 from app.schemas import (
@@ -65,29 +65,38 @@ def get_customer_catalog(db: Session = Depends(get_db)):
 
 
 @router.post("/bookings", response_model=CustomerPortalBookingResponse, status_code=status.HTTP_201_CREATED)
-def create_customer_booking(payload: CustomerPortalBookingRequest, db: Session = Depends(get_db)):
-    customer = (
+def create_customer_booking(
+    payload: CustomerPortalBookingRequest,
+    current_user: StaffPrincipal = Depends(require_customer),
+    db: Session = Depends(get_db),
+):
+    customer = db.query(Customer).filter(Customer.customer_id == current_user.customer_id).first()
+    if customer is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
+
+    license_owner = (
         db.query(Customer)
-        .filter(Customer.license_number == payload.license_number)
+        .filter(Customer.license_number == payload.license_number, Customer.customer_id != customer.customer_id)
         .first()
     )
-    if customer is None:
-        customer = Customer(
-            first_name=payload.first_name,
-            last_name=payload.last_name,
-            street=payload.street,
-            city=payload.city,
-            state=payload.state,
-            zip=payload.zip,
-            license_number=payload.license_number,
-            license_state=payload.license_state,
-            credit_card_type=payload.credit_card_type,
-            credit_card_number=payload.credit_card_number,
-            exp_month=payload.exp_month,
-            exp_year=payload.exp_year,
-        )
-        db.add(customer)
-        db.flush()
+    if license_owner is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="License number already belongs to another customer")
+
+    for field in [
+        "first_name",
+        "last_name",
+        "street",
+        "city",
+        "state",
+        "zip",
+        "license_number",
+        "license_state",
+        "credit_card_type",
+        "credit_card_number",
+        "exp_month",
+        "exp_year",
+    ]:
+        setattr(customer, field, getattr(payload, field))
 
     reservation = Reservation(
         customer_id=customer.customer_id,
@@ -104,8 +113,7 @@ def create_customer_booking(payload: CustomerPortalBookingRequest, db: Session =
     return CustomerPortalBookingResponse(customer_id=customer.customer_id, reservation=reservation)
 
 
-@router.get("/summary/{customer_id}", response_model=CustomerPortalSummary)
-def get_customer_summary(customer_id: UUID, db: Session = Depends(get_db)):
+def _build_customer_summary(customer_id: UUID, db: Session) -> CustomerPortalSummary:
     customer = db.query(Customer).filter(Customer.customer_id == customer_id).first()
     if not customer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
@@ -128,3 +136,24 @@ def get_customer_summary(customer_id: UUID, db: Session = Depends(get_db)):
         active_rentals=active_rentals,
         workflow=CUSTOMER_WORKFLOW,
     )
+
+
+@router.get("/me", response_model=CustomerPortalSummary)
+def get_my_customer_summary(
+    current_user: StaffPrincipal = Depends(require_customer),
+    db: Session = Depends(get_db),
+):
+    return _build_customer_summary(current_user.customer_id, db)
+
+
+@router.get("/summary/{customer_id}", response_model=CustomerPortalSummary)
+def get_customer_summary(
+    customer_id: UUID,
+    current_user: StaffPrincipal = Depends(require_authenticated),
+    db: Session = Depends(get_db),
+):
+    if current_user.role == "customer" and current_user.customer_id != customer_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot access another customer account")
+    if current_user.role != "customer":
+        require_staff(current_user)
+    return _build_customer_summary(customer_id, db)

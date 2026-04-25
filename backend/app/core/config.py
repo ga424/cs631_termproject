@@ -28,7 +28,6 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_minutes: int = 480
     staff_users: str = (
-        "customer:customer123:customer,"
         "agent:agent123:agent,"
         "manager:manager123:manager,"
         "admin:admin123:admin"
