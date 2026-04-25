@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LandingHero, PersonaSelector, SignInPanel, type LoginFormState } from "../components/landing";
+import { MilanBrandHeader, PersonaSelector, SignInPanel, type LoginFormState } from "../components/landing";
 import { useAuth } from "../contexts/AuthContext";
 import { navigateTo } from "../lib/router";
 import type { Role } from "../lib/types";
@@ -32,30 +32,25 @@ export function LandingPage() {
     }
   }
 
-  function focusSignIn() {
-    document.getElementById("sign-in-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }
-
   return (
     <main className="landing-shell">
-      <LandingHero onStart={focusSignIn} />
-      <section className="landing-workspace" aria-label="Choose a role and sign in">
-        <div className="landing-role-copy">
-          <p className="eyebrow">Role Workspaces</p>
-          <h2>Each user lands in the tools they need.</h2>
-          <p>
-            Choose a persona to preload demo credentials, then sign in to open the matching workflow surface.
-          </p>
+      <section className="milan-login-shell" aria-label="Milan Rent-A-Car sign in">
+        <MilanBrandHeader />
+        <div className="milan-login-stack">
           <PersonaSelector selectedRole={form.username} onSelect={selectRole} />
+          <SignInPanel
+            form={form}
+            loading={loading}
+            error={error}
+            success={success}
+            onChange={setForm}
+            onSubmit={handleLogin}
+          />
+          <div className="milan-login-footnote">
+            <p>Demo app - select a role to preload credentials</p>
+            <p>"Born from innovation, built to compete"</p>
+          </div>
         </div>
-        <SignInPanel
-          form={form}
-          loading={loading}
-          error={error}
-          success={success}
-          onChange={setForm}
-          onSubmit={handleLogin}
-        />
       </section>
     </main>
   );

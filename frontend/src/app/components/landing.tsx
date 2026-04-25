@@ -1,26 +1,34 @@
 import type { Role } from "../lib/types";
 import { AlertStrip } from "./ui";
 
-export const ROLE_COPY: Record<Role, { title: string; subtitle: string; metric: string }> = {
+export const ROLE_COPY: Record<Role, { title: string; surface: string; subtitle: string; icon: string; tone: string }> = {
   customer: {
-    title: "Customer Portal",
-    subtitle: "Book a trip, follow reservations, and track an active rental.",
-    metric: "Self-service",
+    title: "Customer",
+    surface: "Customer Portal",
+    subtitle: "Book and manage your rentals",
+    icon: "◇",
+    tone: "teal",
   },
   agent: {
-    title: "Agent Workspace",
-    subtitle: "Handle walk-ins, pickups, returns, and branch exceptions.",
-    metric: "Counter flow",
+    title: "Agent",
+    surface: "Agent Workspace",
+    subtitle: "Customer service and operations",
+    icon: "▣",
+    tone: "blue",
   },
   manager: {
-    title: "Manager Dashboard",
-    subtitle: "Track utilization, overdue returns, and workflow throughput.",
-    metric: "Branch health",
+    title: "Manager",
+    surface: "Manager Dashboard",
+    subtitle: "Branch oversight and monitoring",
+    icon: "△",
+    tone: "purple",
   },
   admin: {
-    title: "Rental Admin Console",
-    subtitle: "Maintain locations, fleet records, pricing, and operating controls.",
-    metric: "Fleet control",
+    title: "Admin",
+    surface: "Rental Admin Console",
+    subtitle: "System configuration and governance",
+    icon: "*",
+    tone: "orange",
   },
 };
 
@@ -29,52 +37,20 @@ export type LoginFormState = {
   password: string;
 };
 
-export function LandingHero({ onStart }: { onStart: () => void }) {
+export function MilanBrandHeader() {
   return (
-    <section className="landing-hero" aria-labelledby="landing-title">
-      <div className="landing-hero-copy">
-        <p className="eyebrow">Rental Car Management</p>
-        <h1 id="landing-title">Run reservations, rentals, and fleet operations from one workspace.</h1>
-        <p>
-          A role-based FastAPI and React system for customers, agents, managers, and admins with JWT access,
-          operational dashboards, and BPMN-aligned workflows.
-        </p>
-        <div className="landing-actions">
-          <button type="button" onClick={onStart}>Choose Persona</button>
-          <a href="/docs" className="landing-link">Open API Docs</a>
-        </div>
+    <div className="milan-brand">
+      <div className="milan-logo" aria-hidden="true">
+        <div className="milan-flag flag-one" />
+        <div className="milan-flag flag-two" />
+        <div className="milan-flag flag-three" />
+        <svg className="milan-logo-mark" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+        </svg>
       </div>
-      <OperationsVisual />
-    </section>
-  );
-}
-
-export function OperationsVisual() {
-  return (
-    <div className="operations-visual" aria-label="Fleet operations overview">
-      <div className="visual-topline">
-        <span>Live Branch View</span>
-        <strong>94%</strong>
-      </div>
-      <div className="visual-map">
-        <span className="map-node pickup">Pickup</span>
-        <span className="map-road" />
-        <span className="map-node return">Return</span>
-      </div>
-      <div className="visual-fleet">
-        <article>
-          <strong>SUV-204</strong>
-          <span>Ready</span>
-        </article>
-        <article>
-          <strong>EC-118</strong>
-          <span>Rented</span>
-        </article>
-        <article>
-          <strong>LUX-042</strong>
-          <span>Return due</span>
-        </article>
-      </div>
+      <h1>Milan Rent-A-Car</h1>
+      <p>Uniting innovation from Dominican Republic, India & Turkey</p>
+      <span>Select your role to continue</span>
     </div>
   );
 }
@@ -87,15 +63,16 @@ export function PersonaSelector({
   onSelect: (role: Role) => void;
 }) {
   return (
-    <div className="persona-cards" aria-label="Persona selector">
+    <div className="persona-cards login-personas" aria-label="Persona selector">
       {(Object.entries(ROLE_COPY) as Array<[Role, (typeof ROLE_COPY)[Role]]>).map(([role, copy]) => (
         <button
           key={role}
           type="button"
-          className={selectedRole === role ? "persona-card active" : "persona-card"}
+          aria-label={copy.surface}
+          className={selectedRole === role ? `persona-card login-persona ${copy.tone} active` : `persona-card login-persona ${copy.tone}`}
           onClick={() => onSelect(role)}
         >
-          <span>{copy.metric}</span>
+          <span className="persona-icon">{copy.icon}</span>
           <strong>{copy.title}</strong>
           <small>{copy.subtitle}</small>
         </button>
@@ -120,16 +97,13 @@ export function SignInPanel({
   onSubmit: (event: React.FormEvent) => void;
 }) {
   return (
-    <form id="sign-in-panel" onSubmit={onSubmit} className="login-form">
-      <div>
-        <p className="eyebrow">Secure Access</p>
-        <h2>Sign in by persona</h2>
-      </div>
+    <form id="sign-in-panel" onSubmit={onSubmit} className="login-form milan-login-card">
       <AlertStrip error={error} success={success} />
       <label>
         Username
         <input
           aria-label="Username"
+          placeholder="customer"
           value={form.username}
           onChange={(event) => onChange({ ...form, username: event.target.value })}
           required
@@ -140,12 +114,13 @@ export function SignInPanel({
         <input
           aria-label="Password"
           type="password"
+          placeholder="••••••••"
           value={form.password}
           onChange={(event) => onChange({ ...form, password: event.target.value })}
           required
         />
       </label>
-      <button type="submit" disabled={loading}>
+      <button type="submit" disabled={loading || !form.username || !form.password}>
         {loading ? "Signing in..." : "Sign In"}
       </button>
     </form>
