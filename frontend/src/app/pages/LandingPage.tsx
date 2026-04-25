@@ -109,7 +109,6 @@ export function LandingPage() {
     setLoading(true);
     setError("");
     try {
-      const session = await api.signupCustomer({
       await signupCustomer({
         ...signupForm,
         exp_month: Number(signupForm.exp_month),
