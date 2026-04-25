@@ -8,12 +8,12 @@ from datetime import datetime, timedelta
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from app.core.config import settings
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 class StaffPrincipal(BaseModel):
@@ -110,8 +110,16 @@ def decode_access_token(token: str) -> StaffPrincipal:
     return StaffPrincipal(username=username, role=role)
 
 
-def require_staff(token: Annotated[str, Depends(oauth2_scheme)]) -> StaffPrincipal:
-    return decode_access_token(token)
+def require_staff(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+) -> StaffPrincipal:
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication token required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return decode_access_token(credentials.credentials)
 
 
 def require_admin(current_user: Annotated[StaffPrincipal, Depends(require_staff)]) -> StaffPrincipal:

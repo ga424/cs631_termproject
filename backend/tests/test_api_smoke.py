@@ -79,6 +79,18 @@ def test_protected_operational_endpoints_require_jwt():
     assert response.status_code == 401
 
 
+def test_openapi_exposes_http_bearer_auth_scheme():
+    client = TestClient(app)
+
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    payload = response.json()
+    scheme = payload["components"]["securitySchemes"]["HTTPBearer"]
+    assert scheme["type"] == "http"
+    assert scheme["scheme"] == "bearer"
+
+
 def test_health_returns_healthy_when_db_is_reachable():
     app.dependency_overrides[get_db] = _override_db(HealthyDB())
     try:
