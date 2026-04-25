@@ -3,7 +3,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
-from app.core.security import require_staff
+from app.core.lifecycle import record_lifecycle_event
+from app.core.security import StaffPrincipal, require_staff
 from app.db.session import get_db
 from app.models.models import RentalAgreement, Reservation
 from app.schemas import Reservation as ReservationSchema, ReservationCreate, ReservationUpdate
@@ -19,7 +20,7 @@ def _normalize_status(status_value: str | None) -> str:
     if status_upper == "PENDING":
         return "ACTIVE"
     if status_upper == "CONFIRMED":
-        return "COMPLETED"
+        return "FULFILLED"
     return status_upper
 
 
@@ -40,17 +41,35 @@ def get_reservation(reservation_id: UUID, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=ReservationSchema, status_code=status.HTTP_201_CREATED)
-def create_reservation(reservation: ReservationCreate, db: Session = Depends(get_db)):
+def create_reservation(
+    reservation: ReservationCreate,
+    current_user: StaffPrincipal = Depends(require_staff),
+    db: Session = Depends(get_db),
+):
     """Create a new reservation"""
     db_reservation = Reservation(**reservation.dict())
     db.add(db_reservation)
+    db.flush()
+    record_lifecycle_event(
+        db,
+        reservation=db_reservation,
+        event_type="RESERVED",
+        actor=current_user,
+        event_timestamp=db_reservation.pickup_date_time,
+        notes="Reservation created by staff.",
+    )
     db.commit()
     db.refresh(db_reservation)
     return db_reservation
 
 
 @router.put("/{reservation_id}", response_model=ReservationSchema)
-def update_reservation(reservation_id: UUID, reservation: ReservationUpdate, db: Session = Depends(get_db)):
+def update_reservation(
+    reservation_id: UUID,
+    reservation: ReservationUpdate,
+    current_user: StaffPrincipal = Depends(require_staff),
+    db: Session = Depends(get_db),
+):
     """Update a reservation"""
     db_reservation = db.query(Reservation).filter(Reservation.reservation_id == reservation_id).first()
     if not db_reservation:
@@ -61,10 +80,21 @@ def update_reservation(reservation_id: UUID, reservation: ReservationUpdate, db:
 
     current_status = _normalize_status(db_reservation.reservation_status)
     requested_status = _normalize_status(update_data.get("reservation_status"))
-    if current_status == "COMPLETED" and requested_status in {"CANCELED", "NO_SHOW"}:
+    if current_status in {"FULFILLED", "COMPLETED"} and requested_status in {"CANCELED", "NO_SHOW"}:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Completed reservations cannot be canceled or marked no-show",
+            detail="Fulfilled reservations cannot be canceled or marked no-show",
+        )
+
+    existing_rental = (
+        db.query(RentalAgreement)
+        .filter(RentalAgreement.reservation_id == reservation_id)
+        .first()
+    )
+    if existing_rental and requested_status in {"CANCELED", "NO_SHOW"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Reservations with a rental agreement cannot be canceled or marked no-show",
         )
 
     pickup = update_data.get("pickup_date_time", db_reservation.pickup_date_time)
@@ -80,6 +110,15 @@ def update_reservation(reservation_id: UUID, reservation: ReservationUpdate, db:
 
     for field, value in update_data.items():
         setattr(db_reservation, field, value)
+
+    if requested_status in {"CANCELED", "NO_SHOW"} and requested_status != current_status:
+        record_lifecycle_event(
+            db,
+            reservation=db_reservation,
+            event_type=requested_status,
+            actor=current_user,
+            notes=f"Reservation marked {requested_status.lower().replace('_', '-')}.",
+        )
     
     db.commit()
     db.refresh(db_reservation)

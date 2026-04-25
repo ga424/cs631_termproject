@@ -29,7 +29,7 @@ def _normalize_status(status: str | None) -> str:
     if normalized == "PENDING":
         return "ACTIVE"
     if normalized == "CONFIRMED":
-        return "COMPLETED"
+        return "FULFILLED"
     return normalized
 
 

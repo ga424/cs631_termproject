@@ -120,11 +120,14 @@ def list_demo_customers(db: Session = Depends(get_db)):
             .all()
         )
         active_reservations = [item for item in reservations if item.reservation_status == "ACTIVE"]
+        fulfilled_reservations = [item for item in reservations if item.reservation_status in {"FULFILLED", "COMPLETED"}]
         trip_status = (
             "Inactive account"
             if not account.is_active
             else "Active rental"
             if active_rentals
+            else "Returned / billed"
+            if fulfilled_reservations
             else "Upcoming reservation"
             if active_reservations
             else "Ready to book"

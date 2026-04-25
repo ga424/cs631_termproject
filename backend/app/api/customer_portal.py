@@ -4,9 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
 
+from app.core.lifecycle import record_lifecycle_event
 from app.core.security import StaffPrincipal, require_authenticated, require_customer, require_staff
 from app.db.session import get_db
-from app.models.models import CarClass, Customer, Location, RentalAgreement, Reservation
+from app.models.models import CarClass, Customer, Location, RentalAgreement, RentalLifecycleEvent, Reservation
 from app.schemas import (
     CustomerPortalBookingRequest,
     CustomerPortalBookingResponse,
@@ -107,6 +108,15 @@ def create_customer_booking(
         reservation_status="ACTIVE",
     )
     db.add(reservation)
+    db.flush()
+    record_lifecycle_event(
+        db,
+        reservation=reservation,
+        event_type="RESERVED",
+        actor=current_user,
+        event_timestamp=reservation.pickup_date_time,
+        notes="Reservation created from customer portal.",
+    )
     db.commit()
     db.refresh(customer)
     db.refresh(reservation)
@@ -124,16 +134,26 @@ def _build_customer_summary(customer_id: UUID, db: Session) -> CustomerPortalSum
         .order_by(Reservation.pickup_date_time.desc())
         .all()
     )
-    active_rentals = (
+    rental_agreements = (
         db.query(RentalAgreement)
         .join(Reservation, RentalAgreement.reservation_id == Reservation.reservation_id)
-        .filter(Reservation.customer_id == customer_id, RentalAgreement.rental_end_date_time.is_(None))
+        .filter(Reservation.customer_id == customer_id)
+        .order_by(RentalAgreement.rental_start_date_time.desc())
+        .all()
+    )
+    active_rentals = [rental for rental in rental_agreements if rental.rental_end_date_time is None]
+    lifecycle_events = (
+        db.query(RentalLifecycleEvent)
+        .filter(RentalLifecycleEvent.customer_id == customer_id)
+        .order_by(RentalLifecycleEvent.event_timestamp.asc(), RentalLifecycleEvent.created_at.asc())
         .all()
     )
     return CustomerPortalSummary(
         customer=customer,
         reservations=reservations,
+        rental_agreements=rental_agreements,
         active_rentals=active_rentals,
+        lifecycle_events=lifecycle_events,
         workflow=CUSTOMER_WORKFLOW,
     )
 

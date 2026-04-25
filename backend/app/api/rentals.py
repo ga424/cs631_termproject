@@ -5,7 +5,8 @@ import math
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
-from app.core.security import require_staff
+from app.core.lifecycle import record_lifecycle_event
+from app.core.security import StaffPrincipal, require_staff
 from app.db.session import get_db
 from app.models.models import Car, RentalAgreement, Reservation
 from app.schemas import RentalAgreement as RentalAgreementSchema, RentalAgreementCreate, RentalAgreementUpdate
@@ -21,7 +22,7 @@ def _normalize_status(status_value: str | None) -> str:
     if status_upper == "PENDING":
         return "ACTIVE"
     if status_upper == "CONFIRMED":
-        return "COMPLETED"
+        return "FULFILLED"
     return status_upper
 
 
@@ -58,7 +59,11 @@ def get_rental_agreement(contract_no: UUID, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=RentalAgreementSchema, status_code=status.HTTP_201_CREATED)
-def create_rental_agreement(agreement: RentalAgreementCreate, db: Session = Depends(get_db)):
+def create_rental_agreement(
+    agreement: RentalAgreementCreate,
+    current_user: StaffPrincipal = Depends(require_staff),
+    db: Session = Depends(get_db),
+):
     """Create a new rental agreement"""
     reservation = (
         db.query(Reservation)
@@ -116,22 +121,54 @@ def create_rental_agreement(agreement: RentalAgreementCreate, db: Session = Depe
             detail="Selected car already has an open rental agreement",
         )
 
-    if agreement.start_odometer_reading < car.current_odometer_reading:
+    if (
+        agreement.start_odometer_reading is not None
+        and agreement.start_odometer_reading != car.current_odometer_reading
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="start_odometer_reading cannot be below current car odometer",
+            detail="start_odometer_reading must match the current car odometer",
         )
 
-    db_agreement = RentalAgreement(**agreement.dict())
-    reservation.reservation_status = "COMPLETED"
+    db_agreement = RentalAgreement(
+        reservation_id=agreement.reservation_id,
+        vin=agreement.vin,
+        rental_start_date_time=agreement.rental_start_date_time,
+        start_odometer_reading=car.current_odometer_reading,
+    )
+    reservation.reservation_status = "FULFILLED"
     db.add(db_agreement)
+    db.flush()
+    record_lifecycle_event(
+        db,
+        reservation=reservation,
+        event_type="PICKED_UP",
+        actor=current_user,
+        contract_no=db_agreement.contract_no,
+        event_timestamp=agreement.rental_start_date_time,
+        notes=f"Assigned VIN {agreement.vin} at odometer {car.current_odometer_reading}.",
+    )
+    record_lifecycle_event(
+        db,
+        reservation=reservation,
+        event_type="RENTAL_OPENED",
+        actor=current_user,
+        contract_no=db_agreement.contract_no,
+        event_timestamp=agreement.rental_start_date_time,
+        notes="Rental agreement opened from fulfilled reservation.",
+    )
     db.commit()
     db.refresh(db_agreement)
     return db_agreement
 
 
 @router.put("/{contract_no}", response_model=RentalAgreementSchema)
-def update_rental_agreement(contract_no: UUID, agreement: RentalAgreementUpdate, db: Session = Depends(get_db)):
+def update_rental_agreement(
+    contract_no: UUID,
+    agreement: RentalAgreementUpdate,
+    current_user: StaffPrincipal = Depends(require_staff),
+    db: Session = Depends(get_db),
+):
     """Update a rental agreement"""
     db_agreement = db.query(RentalAgreement).filter(RentalAgreement.contract_no == contract_no).first()
     if not db_agreement:
@@ -176,6 +213,27 @@ def update_rental_agreement(contract_no: UUID, agreement: RentalAgreementUpdate,
         car = db.query(Car).filter(Car.vin == db_agreement.vin).first()
         if car:
             car.current_odometer_reading = end_odometer
+
+    if "rental_end_date_time" in update_data:
+        record_lifecycle_event(
+            db,
+            reservation=db_agreement.reservation,
+            event_type="RETURNED",
+            actor=current_user,
+            contract_no=db_agreement.contract_no,
+            event_timestamp=rental_end,
+            notes=f"Returned with odometer {end_odometer}.",
+        )
+    if "actual_cost" in update_data and update_data["actual_cost"] is not None:
+        record_lifecycle_event(
+            db,
+            reservation=db_agreement.reservation,
+            event_type="BILLED",
+            actor=current_user,
+            contract_no=db_agreement.contract_no,
+            event_timestamp=rental_end,
+            notes=f"Final charge ${float(update_data['actual_cost']):.2f}.",
+        )
     
     db.commit()
     db.refresh(db_agreement)
