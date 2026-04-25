@@ -1,4 +1,4 @@
-import { formatDateTime } from "../../lib/api";
+import { formatCurrency, formatDateTime } from "../../lib/api";
 import { QueueList, WorkflowTracker } from "../../components/ui";
 import type { CarClass, CustomerPortalSummary, Location, RentalAgreement, Reservation } from "../../lib/types";
 import { rentalStepIndex, reservationStepIndex } from "../../lib/workflows";
@@ -21,12 +21,27 @@ function ReservationDrilldown({
   const activeIndex = activeRental
     ? rentalStepIndex(Boolean(activeRental.rental_end_date_time))
     : reservationStepIndex(reservation.reservation_status);
+  const events = summary.lifecycle_events.filter((event) => event.reservation_id === reservation.reservation_id);
+  const tripStatus = activeRental
+    ? activeRental.rental_end_date_time
+      ? "Returned / Billed"
+      : "Active rental"
+    : reservation.reservation_status === "FULFILLED"
+      ? "Returned / Billed"
+      : reservation.reservation_status === "ACTIVE"
+        ? "Reserved"
+        : reservation.reservation_status.replace("_", "-");
+  const nextAction = activeRental && !activeRental.rental_end_date_time
+    ? "Return vehicle"
+    : reservation.reservation_status === "ACTIVE"
+      ? "Arrive for pickup"
+      : "Review trip history";
 
   return (
     <details className="reservation-drilldown">
       <summary>
         <span>
-          <strong>{carClass?.class_name || "Reserved vehicle"} · {reservation.reservation_status}</strong>
+          <strong>{carClass?.class_name || "Reserved vehicle"} · {tripStatus}</strong>
           <small>{formatDateTime(reservation.pickup_date_time)} to {formatDateTime(reservation.return_date_time_requested)}</small>
         </span>
         <em>{branch ? `${branch.city}, ${branch.state}` : "Branch"}</em>
@@ -34,15 +49,37 @@ function ReservationDrilldown({
       <div className="reservation-detail-grid">
         <div className="identity-card">
           <strong>Trip status</strong>
-          <span>{activeRental ? "Rental in progress" : reservation.reservation_status}</span>
+          <span>{tripStatus}</span>
           <p>{activeRental ? `Assigned VIN ${activeRental.vin}` : "Pickup assignment will be completed by an agent."}</p>
         </div>
         <div className="identity-card">
           <strong>Next action</strong>
-          <span>{activeRental ? "Return vehicle" : "Arrive for pickup"}</span>
+          <span>{nextAction}</span>
           <p>{activeRental ? "Return the vehicle by the requested return time for closeout and billing." : "Bring license and payment to the selected branch at pickup time."}</p>
         </div>
+        {activeRental ? (
+          <div className="identity-card">
+            <strong>Odometer and billing</strong>
+            <span>Pickup {activeRental.start_odometer_reading.toLocaleString()} mi</span>
+            <p>
+              {activeRental.end_odometer_reading
+                ? `Returned at ${activeRental.end_odometer_reading.toLocaleString()} mi · ${formatCurrency(activeRental.actual_cost)}`
+                : "Return odometer and final charge are captured at closeout."}
+            </p>
+          </div>
+        ) : null}
       </div>
+      {events.length ? (
+        <ol className="audit-timeline" aria-label="Trip audit trail">
+          {events.map((event) => (
+            <li key={event.event_id}>
+              <strong>{event.event_type.replace("_", " ")}</strong>
+              <span>{formatDateTime(event.event_timestamp)} · {event.actor_role} {event.actor_username}</span>
+              {event.notes ? <p>{event.notes}</p> : null}
+            </li>
+          ))}
+        </ol>
+      ) : null}
       <WorkflowTracker stages={summary.workflow} activeIndex={activeIndex} title="Reservation journey" />
     </details>
   );
@@ -94,7 +131,7 @@ export function MyTripTab({
             {summary.reservations.length ? (
               <div className="reservation-stack">
                 {summary.reservations.map((item) => {
-                  const rentalForReservation = summary.active_rentals.find((rental) => rental.reservation_id === item.reservation_id);
+                  const rentalForReservation = summary.rental_agreements.find((rental) => rental.reservation_id === item.reservation_id);
                   return (
                     <ReservationDrilldown
                       key={item.reservation_id}
