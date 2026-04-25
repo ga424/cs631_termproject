@@ -29,7 +29,7 @@ export function PickupTab({
       <form className="stack-form" onSubmit={createRental}>
         <select value={rentalForm.reservation_id} onChange={(e) => setRentalForm((c) => ({ ...c, reservation_id: e.target.value }))} required>
           <option value="">Reservation</option>
-          {staff.activeReservations.map((item) => (
+          {staff.unassignedActiveReservations.map((item) => (
             <option key={item.reservation_id} value={item.reservation_id}>
               {staff.customerById[item.customer_id]?.first_name || "Customer"} · {item.reservation_id.slice(0, 8)}
             </option>
@@ -41,6 +41,9 @@ export function PickupTab({
             <option key={car.vin} value={car.vin}>{car.vin} · {car.model_name}</option>
           ))}
         </select>
+        {rentalForm.reservation_id && assignableCars.length === 0 ? (
+          <div className="empty-block">No available car matches this reservation branch and class.</div>
+        ) : null}
         <label className="stack-label">
           Rental start
           <input type="datetime-local" value={rentalForm.rental_start_date_time} onChange={(e) => setRentalForm((c) => ({ ...c, rental_start_date_time: e.target.value }))} required />

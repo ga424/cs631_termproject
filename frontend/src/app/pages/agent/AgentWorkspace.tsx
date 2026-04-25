@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
 import { useAuth } from "../../contexts/AuthContext";
 import { useStaffData } from "../../hooks/useStaffData";
@@ -40,6 +40,18 @@ export function AgentWorkspace() {
     });
   }, [rentalForm.reservation_id, staff]);
 
+  useEffect(() => {
+    if (!rentalForm.reservation_id && staff.unassignedActiveReservations[0]) {
+      setRentalForm((current) => ({ ...current, reservation_id: staff.unassignedActiveReservations[0].reservation_id }));
+    }
+  }, [rentalForm.reservation_id, staff.unassignedActiveReservations]);
+
+  useEffect(() => {
+    if (rentalForm.reservation_id && !rentalForm.vin && assignableCars[0]) {
+      setRentalForm((current) => ({ ...current, vin: assignableCars[0].vin }));
+    }
+  }, [assignableCars, rentalForm.reservation_id, rentalForm.vin]);
+
   async function createCustomer(event: React.FormEvent) {
     event.preventDefault();
     await staff.perform(async () => {
@@ -63,6 +75,7 @@ export function AgentWorkspace() {
       } as Reservation);
       setRentalForm((current) => ({ ...current, reservation_id: created.reservation_id }));
       setReservationForm(DEFAULT_RESERVATION_FORM);
+      setActiveTab("pickup");
     }, "Reservation created.");
   }
 
