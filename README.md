@@ -112,7 +112,12 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
      - `http://localhost:5173/admin`
 
 6. **Sign in to the frontend**
-   - Customer: select a seeded customer card, or use `john.doe` / `customer123`
+   - Customer: select a seeded customer card, or use one of these pre-created DB-backed demo accounts (all use password `customer123`):
+     - `john.doe`
+     - `jane.smith`
+     - `robert.johnson`
+     - `emily.williams`
+     - `michael.brown`
    - Agent: `agent` / `agent123`
    - Manager: `manager` / `manager123`
    - Admin: `admin` / `admin123`

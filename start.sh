@@ -129,7 +129,10 @@ case "${1:-help}" in
         echo -e "${GREEN}Seeding database with sample data...${NC}"
         docker-compose up -d postgres
         sleep 2
-        docker-compose exec -T api python seed_data.py
+        if ! docker-compose exec -T api python seed_data.py; then
+            echo -e "${RED}Database seed failed.${NC}"
+            exit 1
+        fi
         echo -e "${GREEN}Database seeded successfully!${NC}"
         ;;
     e2e-dashboard|e2e-ui)

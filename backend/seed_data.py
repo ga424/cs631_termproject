@@ -22,19 +22,123 @@ from app.models.models import (
 
 DEMO_CUSTOMER_PASSWORD = "customer123"
 
+DEMO_ACCOUNT_BY_NAME = {
+    ("john", "doe"): "john.doe",
+    ("jane", "smith"): "jane.smith",
+    ("robert", "johnson"): "robert.johnson",
+    ("emily", "williams"): "emily.williams",
+    ("michael", "brown"): "michael.brown",
+}
+
+
+def preferred_demo_username(customer):
+    """Return a stable demo username for known seeded users, else a normalized fallback."""
+    key = (customer.first_name.strip().lower(), customer.last_name.strip().lower())
+    if key in DEMO_ACCOUNT_BY_NAME:
+        return DEMO_ACCOUNT_BY_NAME[key]
+    return normalize_username(f"{customer.first_name}.{customer.last_name}")
+
+
+def print_demo_credentials(session):
+    """Print active demo customer credentials for local demos."""
+    rows = (
+        session.query(CustomerAccount, Customer)
+        .join(Customer, CustomerAccount.customer_id == Customer.customer_id)
+        .filter(CustomerAccount.is_active.is_(True))
+        .order_by(Customer.last_name.asc(), Customer.first_name.asc())
+        .all()
+    )
+
+    if not rows:
+        print("\nNo active customer demo accounts found.")
+        return
+
+    row_by_name = {
+        (customer.first_name.strip().lower(), customer.last_name.strip().lower()): (account, customer)
+        for account, customer in rows
+    }
+
+    print("\nRecommended demo customer accounts (shared password):")
+    print(f"   password: {DEMO_CUSTOMER_PASSWORD}")
+    curated_count = 0
+    for name_key, expected_username in DEMO_ACCOUNT_BY_NAME.items():
+        row = row_by_name.get(name_key)
+        if not row:
+            continue
+        account, customer = row
+        curated_count += 1
+        marker = "" if account.username == expected_username else f" (expected {expected_username})"
+        print(f"   - {customer.first_name} {customer.last_name}: {account.username}{marker}")
+
+    if curated_count == 0:
+        print("   - No curated seeded demo users were found.")
+
+    additional = [
+        (account, customer)
+        for account, customer in rows
+        if (customer.first_name.strip().lower(), customer.last_name.strip().lower()) not in DEMO_ACCOUNT_BY_NAME
+    ]
+    if additional:
+        print("\nAdditional customer accounts present:")
+        for account, customer in additional:
+            print(f"   - {customer.first_name} {customer.last_name}: {account.username}")
+
+
+def print_seeded_customer_account_snapshot(session):
+    """Print persisted seeded customer account details for quick demo handoff."""
+    print("\nSeeded customer account snapshot:")
+    for name_key, expected_username in DEMO_ACCOUNT_BY_NAME.items():
+        first_name, last_name = name_key
+        customer = (
+            session.query(Customer)
+            .filter(Customer.first_name.ilike(first_name), Customer.last_name.ilike(last_name))
+            .first()
+        )
+        if not customer:
+            print(f"   - {first_name.title()} {last_name.title()}: missing customer record")
+            continue
+
+        account = (
+            session.query(CustomerAccount)
+            .filter(CustomerAccount.customer_id == customer.customer_id)
+            .first()
+        )
+        if not account:
+            print(f"   - {customer.first_name} {customer.last_name}: missing account (expected {expected_username})")
+            continue
+
+        print(
+            "   - "
+            f"{customer.first_name} {customer.last_name}: "
+            f"username={account.username}, customer_id={customer.customer_id}, account_id={account.account_id}"
+        )
+
+
+def print_demo_summary(session):
+    """Print a concise summary of demo-ready seeded customer accounts."""
+    print_demo_credentials(session)
+    print_seeded_customer_account_snapshot(session)
+
 
 def ensure_customer_accounts(session, customers):
     """Create demo login accounts for seeded customers that do not already have one."""
     print("  - Ensuring customer demo accounts...")
+    reserved_usernames = {
+        username
+        for (username,) in session.query(CustomerAccount.username).all()
+        if username
+    }
+
     for customer in customers:
         existing = session.query(CustomerAccount).filter(CustomerAccount.customer_id == customer.customer_id).first()
         if existing:
+            reserved_usernames.add(existing.username)
             continue
 
-        base_username = normalize_username(f"{customer.first_name}.{customer.last_name}")
+        base_username = preferred_demo_username(customer)
         username = base_username
         suffix = 2
-        while session.query(CustomerAccount).filter(CustomerAccount.username == username).first():
+        while username in reserved_usernames:
             username = f"{base_username}{suffix}"
             suffix += 1
 
@@ -44,7 +148,10 @@ def ensure_customer_accounts(session, customers):
             password_hash=hash_password(DEMO_CUSTOMER_PASSWORD),
             is_active=True,
         ))
+        reserved_usernames.add(username)
+
     session.commit()
+    print_demo_summary(session)
 
 
 def create_engine_and_session():
