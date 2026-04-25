@@ -67,6 +67,24 @@ INACTIVE_DEMO_CUSTOMERS = [
     },
 ]
 
+SAMPLE_VEHICLE_CATALOG = [
+    ("Standard Elite SUV", "Ford Explorer", "Ford", 2024, 36.83, 232.03, "SAMPLEVIN00000001"),
+    ("Full-Size", "Toyota Camry", "Toyota", 2024, 32.67, 205.82, "SAMPLEVIN00000002"),
+    ("Intermediate", "Toyota Corolla", "Toyota", 2024, 32.67, 205.82, "SAMPLEVIN00000003"),
+    ("Economy", "Hyundai Venue", "Hyundai", 2024, 31.58, 198.95, "SAMPLEVIN00000004"),
+    ("Intermediate SUV", "Mazda CX-50", "Mazda", 2024, 31.91, 201.03, "SAMPLEVIN00000005"),
+    ("Premium", "Toyota Crown", "Toyota", 2024, 81.96, 516.35, "SAMPLEVIN00000006"),
+    ("Standard SUV", "Chevrolet Equinox", "Chevrolet", 2024, 34.10, 214.83, "SAMPLEVIN00000007"),
+    ("Compact", "Kia Soul", "Kia", 2024, 31.58, 198.95, "SAMPLEVIN00000008"),
+    ("Standard", "Volkswagen Jetta", "Volkswagen", 2024, 32.67, 205.82, "SAMPLEVIN00000009"),
+    ("Intermediate Electric", "Kia Niro", "Kia", 2024, 30.05, 189.32, "SAMPLEVIN00000010"),
+    ("Standard Elite Electric", "Kia EV6", "Kia", 2024, 31.58, 198.95, "SAMPLEVIN00000011"),
+    ("Minivan", "Chrysler Pacifica", "Chrysler", 2024, 32.89, 207.21, "SAMPLEVIN00000012"),
+    ("Full-Size Pickup", "GMC Sierra", "GMC", 2024, 39.01, 245.76, "SAMPLEVIN00000013"),
+    ("Luxury", "Cadillac CT5", "Cadillac", 2024, 81.96, 516.35, "SAMPLEVIN00000014"),
+    ("Passenger Van", "Ford Transit 12-Passenger Van RWD", "Ford", 2024, 109.29, 688.53, "SAMPLEVIN00000015"),
+]
+
 
 def preferred_demo_username(customer):
     """Return a stable demo username for known seeded users, else a normalized fallback."""
@@ -230,6 +248,52 @@ def ensure_inactive_demo_customers(session):
     session.commit()
 
 
+def ensure_sample_vehicle_catalog(session):
+    """Ensure demo catalog includes realistic rental-market vehicle classes and examples."""
+    locations = session.query(Location).order_by(Location.city.asc()).all()
+    if not locations:
+        return
+
+    for index, (class_name, model_name, make_name, model_year, daily_rate, weekly_rate, vin) in enumerate(SAMPLE_VEHICLE_CATALOG):
+        car_class = session.query(CarClass).filter(CarClass.class_name == class_name).first()
+        if car_class is None:
+            car_class = CarClass(class_name=class_name, daily_rate=daily_rate, weekly_rate=weekly_rate)
+            session.add(car_class)
+            session.flush()
+        else:
+            car_class.daily_rate = daily_rate
+            car_class.weekly_rate = weekly_rate
+
+        actual_model_name = model_name
+        model = session.query(Model).filter(Model.model_name == actual_model_name).first()
+        if model is not None and model.class_id != car_class.class_id:
+            actual_model_name = f"{model_name} {class_name}"
+            model = session.query(Model).filter(Model.model_name == actual_model_name).first()
+
+        if model is None:
+            model = Model(
+                model_name=actual_model_name,
+                make_name=make_name,
+                model_year=model_year,
+                class_id=car_class.class_id,
+            )
+            session.add(model)
+        else:
+            model.make_name = make_name
+            model.model_year = model_year
+            model.class_id = car_class.class_id
+
+        if session.query(Car).filter(Car.vin == vin).first() is None:
+            session.add(Car(
+                vin=vin,
+                current_odometer_reading=6000 + (index * 875),
+                location_id=locations[index % len(locations)].location_id,
+                model_name=actual_model_name,
+            ))
+
+    session.commit()
+
+
 def ensure_lifecycle_event(session, reservation, event_type, *, rental=None, actor_role="system", actor_username="seed", event_timestamp=None, notes=None):
     """Create one deterministic lifecycle event for seeded demo records."""
     query = (
@@ -265,6 +329,9 @@ def ensure_seed_lifecycle_events(session):
     }
 
     for reservation in reservations:
+        if reservation.return_location_id is None:
+            reservation.return_location_id = reservation.location_id
+
         rental = rentals_by_reservation.get(reservation.reservation_id)
         status = (reservation.reservation_status or "").upper()
         if rental is not None and status in {"COMPLETED", "CONFIRMED", "ACTIVE"}:
@@ -352,6 +419,7 @@ def seed_database():
         existing_locations = session.query(Location).count()
         if existing_locations > 0:
             customers = session.query(Customer).all()
+            ensure_sample_vehicle_catalog(session)
             ensure_customer_accounts(session, customers)
             ensure_inactive_demo_customers(session)
             ensure_seed_lifecycle_events(session)
@@ -488,6 +556,7 @@ def seed_database():
             Reservation(
                 customer_id=customers[0].customer_id,
                 location_id=locations[0].location_id,
+                return_location_id=locations[0].location_id,
                 class_id=car_classes[0].class_id,
                 pickup_date_time=now + timedelta(days=1),
                 return_date_time_requested=now + timedelta(days=4),
@@ -496,6 +565,7 @@ def seed_database():
             Reservation(
                 customer_id=customers[1].customer_id,
                 location_id=locations[1].location_id,
+                return_location_id=locations[2].location_id,
                 class_id=car_classes[2].class_id,
                 pickup_date_time=now + timedelta(days=2),
                 return_date_time_requested=now + timedelta(days=9),
@@ -504,6 +574,7 @@ def seed_database():
             Reservation(
                 customer_id=customers[2].customer_id,
                 location_id=locations[2].location_id,
+                return_location_id=locations[2].location_id,
                 class_id=car_classes[4].class_id,
                 pickup_date_time=now + timedelta(days=3),
                 return_date_time_requested=now + timedelta(days=6),
@@ -512,6 +583,7 @@ def seed_database():
             Reservation(
                 customer_id=customers[3].customer_id,
                 location_id=locations[3].location_id,
+                return_location_id=locations[3].location_id,
                 class_id=car_classes[1].class_id,
                 pickup_date_time=now + timedelta(days=5),
                 return_date_time_requested=now + timedelta(days=8),
@@ -520,6 +592,7 @@ def seed_database():
             Reservation(
                 customer_id=customers[4].customer_id,
                 location_id=locations[4].location_id,
+                return_location_id=locations[4].location_id,
                 class_id=car_classes[5].class_id,
                 pickup_date_time=now + timedelta(days=7),
                 return_date_time_requested=now + timedelta(days=14),
@@ -562,6 +635,7 @@ def seed_database():
         ]
         session.add_all(rental_agreements)
         session.commit()
+        ensure_sample_vehicle_catalog(session)
         ensure_seed_lifecycle_events(session)
         
         print("\n✅ Sample data successfully created!")

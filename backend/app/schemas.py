@@ -390,8 +390,21 @@ class WorkflowStage(BaseModel):
 
 
 class CustomerPortalCatalog(BaseModel):
+    class CustomerPortalVehicleOption(BaseModel):
+        class_id: UUID
+        class_name: str
+        similar_model: str
+        seats: int
+        doors: int
+        bags: int
+        daily_rate: float
+        weekly_rate: float
+        rate_badge: str
+        upgrade_badge: Optional[str] = None
+
     locations: list[Location]
     car_classes: list[CarClass]
+    vehicle_options: list[CustomerPortalVehicleOption] = []
     workflow: list[WorkflowStage]
 
 

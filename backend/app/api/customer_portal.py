@@ -55,12 +55,53 @@ CUSTOMER_WORKFLOW = [
     ),
 ]
 
+CATALOG_CAPACITY = {
+    "15-Passenger Van": (15, 4, 1),
+    "Compact": (5, 4, 1),
+    "Economy": (5, 4, 1),
+    "Full-Size": (5, 4, 2),
+    "Full-Size Pickup": (5, 4, 5),
+    "Intermediate": (5, 4, 1),
+    "Intermediate Electric": (5, 4, 1),
+    "Intermediate SUV": (5, 4, 1),
+    "Luxury": (5, 4, 2),
+    "Minivan": (7, 4, 2),
+    "Passenger Van": (12, 4, 2),
+    "Premium": (5, 4, 2),
+    "Standard": (5, 4, 1),
+    "Standard Elite Electric": (5, 4, 1),
+    "Standard Elite SUV": (7, 4, 1),
+    "Standard SUV": (5, 4, 1),
+}
+
 
 @router.get("/catalog", response_model=CustomerPortalCatalog)
 def get_customer_catalog(db: Session = Depends(get_db)):
+    car_classes = db.query(CarClass).all()
+    options = []
+    for car_class in car_classes:
+        seats, doors, bags = CATALOG_CAPACITY.get(car_class.class_name, (5, 4, 1))
+        similar_model = car_class.models[0].model_name if car_class.models else car_class.class_name
+        options.append(
+            CustomerPortalCatalog.CustomerPortalVehicleOption(
+                class_id=car_class.class_id,
+                class_name=car_class.class_name,
+                similar_model=f"{similar_model} or Similar",
+                seats=seats,
+                doors=doors,
+                bags=bags,
+                daily_rate=float(car_class.daily_rate),
+                weekly_rate=float(car_class.weekly_rate),
+                rate_badge="Discounted Rate",
+                upgrade_badge="Free Upgrade Eligible" if car_class.class_name in {"Full-Size", "Intermediate", "Standard"} else None,
+            )
+        )
+    options.sort(key=lambda item: (item.daily_rate, item.class_name))
+
     return CustomerPortalCatalog(
         locations=db.query(Location).all(),
-        car_classes=db.query(CarClass).all(),
+        car_classes=car_classes,
+        vehicle_options=options,
         workflow=CUSTOMER_WORKFLOW,
     )
 
