@@ -151,6 +151,13 @@ def test_middleware_reraises_unhandled_exception():
         asyncio.run(main_module.log_requests(request, failing_call_next))
 
 
+def test_request_area_groups_stable_api_paths():
+    assert main_module.request_area("/") == "root"
+    assert main_module.request_area("/health") == "health"
+    assert main_module.request_area("/api/v1/customers") == "customers"
+    assert main_module.request_area("/api/v1/customers/123") == "customers"
+
+
 def test_main_block_invokes_uvicorn_run(monkeypatch):
     captured = {}
 
