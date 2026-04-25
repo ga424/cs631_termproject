@@ -1,7 +1,52 @@
 import { formatDateTime } from "../../lib/api";
 import { QueueList, WorkflowTracker } from "../../components/ui";
-import type { CarClass, CustomerPortalSummary, Location } from "../../lib/types";
+import type { CarClass, CustomerPortalSummary, Location, RentalAgreement, Reservation } from "../../lib/types";
 import { rentalStepIndex, reservationStepIndex } from "../../lib/workflows";
+
+function ReservationDrilldown({
+  reservation,
+  activeRental,
+  summary,
+  locationById,
+  classById,
+}: {
+  reservation: Reservation;
+  activeRental: RentalAgreement | undefined;
+  summary: CustomerPortalSummary;
+  locationById: Record<string, Location>;
+  classById: Record<string, CarClass>;
+}) {
+  const branch = locationById[reservation.location_id];
+  const carClass = classById[reservation.class_id];
+  const activeIndex = activeRental
+    ? rentalStepIndex(Boolean(activeRental.rental_end_date_time))
+    : reservationStepIndex(reservation.reservation_status);
+
+  return (
+    <details className="reservation-drilldown">
+      <summary>
+        <span>
+          <strong>{carClass?.class_name || "Reserved vehicle"} · {reservation.reservation_status}</strong>
+          <small>{formatDateTime(reservation.pickup_date_time)} to {formatDateTime(reservation.return_date_time_requested)}</small>
+        </span>
+        <em>{branch ? `${branch.city}, ${branch.state}` : "Branch"}</em>
+      </summary>
+      <div className="reservation-detail-grid">
+        <div className="identity-card">
+          <strong>Trip status</strong>
+          <span>{activeRental ? "Rental in progress" : reservation.reservation_status}</span>
+          <p>{activeRental ? `Assigned VIN ${activeRental.vin}` : "Pickup assignment will be completed by an agent."}</p>
+        </div>
+        <div className="identity-card">
+          <strong>Next action</strong>
+          <span>{activeRental ? "Return vehicle" : "Arrive for pickup"}</span>
+          <p>{activeRental ? "Return the vehicle by the requested return time for closeout and billing." : "Bring license and payment to the selected branch at pickup time."}</p>
+        </div>
+      </div>
+      <WorkflowTracker stages={summary.workflow} activeIndex={activeIndex} title="Reservation journey" />
+    </details>
+  );
+}
 
 export function MyTripTab({
   summary,
@@ -44,16 +89,28 @@ export function MyTripTab({
             <span>{summary.customer.license_state}-{summary.customer.license_number}</span>
             <p>{nextAction}</p>
           </div>
-          <QueueList
-            title="Reservations"
-            items={summary.reservations.map((item) => ({
-              id: item.reservation_id,
-              title: `${classById[item.class_id]?.class_name || "Trip"} · ${item.reservation_status}`,
-              subtitle: `${formatDateTime(item.pickup_date_time)} to ${formatDateTime(item.return_date_time_requested)}`,
-              meta: locationById[item.location_id] ? `${locationById[item.location_id].city}, ${locationById[item.location_id].state}` : "Branch",
-            }))}
-            emptyText="No reservations created yet."
-          />
+          <div className="queue-card reservation-board">
+            <h3>Reservations</h3>
+            {summary.reservations.length ? (
+              <div className="reservation-stack">
+                {summary.reservations.map((item) => {
+                  const rentalForReservation = summary.active_rentals.find((rental) => rental.reservation_id === item.reservation_id);
+                  return (
+                    <ReservationDrilldown
+                      key={item.reservation_id}
+                      reservation={item}
+                      activeRental={rentalForReservation}
+                      summary={summary}
+                      locationById={locationById}
+                      classById={classById}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="empty-block">No reservations created yet.</div>
+            )}
+          </div>
           <QueueList
             title="Active rentals"
             items={summary.active_rentals.map((item) => ({
@@ -63,11 +120,6 @@ export function MyTripTab({
               meta: item.rental_end_date_time ? "Closed" : "In progress",
             }))}
             emptyText="No active rental at the moment."
-          />
-          <WorkflowTracker
-            stages={summary.workflow}
-            activeIndex={activeRental ? rentalStepIndex(Boolean(activeRental.rental_end_date_time)) : reservationStepIndex(reservation?.reservation_status)}
-            title="Trip status"
           />
         </div>
       ) : (
