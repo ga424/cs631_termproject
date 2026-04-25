@@ -11,7 +11,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:e2e:install": "playwright install chromium",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:live": "playwright test --config=playwright.live.config.js"
   },
   "dependencies": {
     "react": "^18.3.1",

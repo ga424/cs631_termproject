@@ -67,127 +67,175 @@ select {
 }
 
 .landing-shell {
-  padding: 18px;
-}
-
-.landing-hero {
-  min-height: min(720px, calc(100vh - 36px));
-  display: grid;
-  gap: 18px;
-  align-items: center;
-}
-
-.landing-hero-copy {
-  display: grid;
-  gap: 16px;
-  max-width: 760px;
-}
-
-.landing-hero h1 {
-  margin: 0;
-  max-width: 820px;
-  font-size: clamp(2.5rem, 9vw, 5.8rem);
-  line-height: 0.94;
-}
-
-.landing-hero p,
-.landing-role-copy p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 1rem;
-  line-height: 1.6;
-}
-
-.landing-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
   align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: linear-gradient(135deg, #fff7ed 0%, #fff3e2 46%, #fff1f2 100%);
 }
 
-.landing-link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 48px;
-  color: var(--accent-dark);
-  font-weight: 800;
-  text-decoration: none;
-}
-
-.operations-visual {
+.milan-login-shell {
+  width: min(100%, 448px);
   display: grid;
-  gap: 16px;
-  padding: 18px;
-  border-radius: 24px;
-  background: #102235;
-  color: #fff;
-  box-shadow: var(--shadow);
-  overflow: hidden;
+  gap: 30px;
 }
 
-.visual-topline,
-.visual-fleet,
-.visual-map {
+.milan-brand {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.milan-logo {
   position: relative;
-  z-index: 1;
-}
-
-.visual-topline {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.visual-topline span,
-.visual-fleet span {
-  color: rgba(255, 255, 255, 0.68);
-}
-
-.visual-map {
-  min-height: 180px;
-  display: grid;
-  align-items: center;
-}
-
-.map-road {
-  height: 8px;
-  border-radius: 999px;
-  background: repeating-linear-gradient(90deg, #fff 0 22px, rgba(255,255,255,0.24) 22px 42px);
-}
-
-.map-node {
-  position: absolute;
+  width: 80px;
+  height: 80px;
   display: grid;
   place-items: center;
-  width: 78px;
-  height: 78px;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent-dark);
-  font-weight: 900;
-  box-shadow: 0 16px 40px -20px #000;
+  border-radius: 22px;
+  overflow: hidden;
+  color: #fff;
+  background: linear-gradient(135deg, #14b8a6, #10b981 48%, #06b6d4);
+  box-shadow: 0 22px 44px -26px rgba(19, 32, 51, 0.85);
 }
 
-.map-node.pickup {
+.milan-flag {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  opacity: 0.22;
+}
+
+.flag-one {
   left: 0;
+  width: 33.33%;
+  background: linear-gradient(135deg, #2563eb, #dc2626);
 }
 
-.map-node.return {
+.flag-two {
+  left: 33.33%;
+  width: 33.33%;
+  background: linear-gradient(135deg, #f97316, #16a34a);
+}
+
+.flag-three {
   right: 0;
+  width: 33.33%;
+  background: linear-gradient(135deg, #dc2626, #fff);
 }
 
-.visual-fleet {
+.milan-logo-mark {
+  position: relative;
+  z-index: 1;
+  width: 42px;
+  height: 42px;
+}
+
+.milan-brand h1 {
+  margin: 0;
+  font-size: 1.9rem;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.milan-brand p {
+  max-width: 320px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.milan-brand span,
+.milan-login-footnote p {
+  color: var(--muted);
+}
+
+.milan-login-stack {
   display: grid;
-  gap: 10px;
+  gap: 18px;
 }
 
-.visual-fleet article {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px;
+.login-personas {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0;
+}
+
+.login-persona {
+  min-height: 128px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid rgba(221, 213, 200, 0.86);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+.login-persona:hover,
+.login-persona.active {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 32px -28px rgba(19, 32, 51, 0.72);
+}
+
+.login-persona.active {
+  border-color: var(--accent);
+  outline: 2px solid color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.persona-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #fff;
+  font-weight: 900;
+  font-size: 1.15rem;
+}
+
+.login-persona.teal .persona-icon {
+  background: linear-gradient(135deg, #14b8a6, #10b981);
+}
+
+.login-persona.blue .persona-icon {
+  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+}
+
+.login-persona.purple .persona-icon {
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+}
+
+.login-persona.orange .persona-icon {
+  background: linear-gradient(135deg, #f97316, #dc2626);
+}
+
+.login-persona strong {
+  font-size: 0.98rem;
+}
+
+.milan-login-card {
+  padding: 22px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.08);
+  gap: 16px;
+}
+
+.milan-login-footnote {
+  display: grid;
+  gap: 8px;
+  text-align: center;
+}
+
+.milan-login-footnote p {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.milan-login-footnote p:last-child {
+  font-style: italic;
 }
 
 .landing-workspace {
@@ -197,12 +245,6 @@ select {
   padding-top: 18px;
 }
 
-.landing-role-copy {
-  display: grid;
-  gap: 12px;
-}
-
-.landing-role-copy h2,
 .login-form h2 {
   margin: 0;
   font-size: clamp(1.8rem, 5vw, 3rem);
@@ -299,6 +341,19 @@ select {
   font-weight: 800;
   text-transform: uppercase;
   color: var(--accent-dark);
+}
+
+.login-persona .persona-icon {
+  display: grid;
+  margin: 0 0 2px;
+  color: #fff;
+  font-size: 1.15rem;
+  text-transform: none;
+}
+
+.login-persona small {
+  margin-top: 0;
+  line-height: 1.35;
 }
 
 .login-form {
@@ -738,14 +793,6 @@ select {
   .landing-shell {
     padding-left: 24px;
     padding-right: 24px;
-  }
-
-  .landing-hero {
-    grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
-  }
-
-  .landing-workspace {
-    grid-template-columns: 1.15fr 0.85fr;
   }
 
   .login-panel {
