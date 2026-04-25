@@ -342,3 +342,53 @@ class DashboardOverview(BaseModel):
     fleet: list[DashboardFleetItem]
     active_rentals: list[DashboardActiveRental]
     upcoming_pickups: list[DashboardUpcomingReservation]
+
+
+class WorkflowStage(BaseModel):
+    stage_id: str
+    label: str
+    owner_role: str
+    description: str
+
+
+class CustomerPortalCatalog(BaseModel):
+    locations: list[Location]
+    car_classes: list[CarClass]
+    workflow: list[WorkflowStage]
+
+
+class CustomerPortalBookingRequest(BaseModel):
+    first_name: str
+    last_name: str
+    street: str
+    city: str
+    state: str = Field(min_length=2, max_length=2)
+    zip: str
+    license_number: str
+    license_state: str = Field(min_length=2, max_length=2)
+    credit_card_type: str
+    credit_card_number: str
+    exp_month: int = Field(ge=1, le=12)
+    exp_year: int
+    location_id: UUID
+    class_id: UUID
+    pickup_date_time: datetime
+    return_date_time_requested: datetime
+
+    @model_validator(mode="after")
+    def validate_dates(self):
+        if self.return_date_time_requested <= self.pickup_date_time:
+            raise ValueError("return_date_time_requested must be after pickup_date_time")
+        return self
+
+
+class CustomerPortalBookingResponse(BaseModel):
+    customer_id: UUID
+    reservation: Reservation
+
+
+class CustomerPortalSummary(BaseModel):
+    customer: Customer
+    reservations: list[Reservation]
+    active_rentals: list[RentalAgreement]
+    workflow: list[WorkflowStage]

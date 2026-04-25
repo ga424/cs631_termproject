@@ -53,6 +53,7 @@ def test_api_version_lists_expected_endpoints():
     assert "/api/v1/customers" == payload["endpoints"]["customers"]
     assert "/api/v1/rental-agreements" == payload["endpoints"]["rental_agreements"]
     assert "/api/v1/auth/login" == payload["endpoints"]["auth_login"]
+    assert "/api/v1/customer-portal" == payload["endpoints"]["customer_portal"]
 
 
 def test_login_returns_bearer_token_for_staff_user():

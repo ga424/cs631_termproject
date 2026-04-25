@@ -13,6 +13,7 @@ def test_staff_personas_can_login_with_expected_roles():
     client = TestClient(app)
 
     for username, password, role in [
+        ("customer", "customer123", "customer"),
         ("agent", "agent123", "agent"),
         ("manager", "manager123", "manager"),
         ("admin", "admin123", "admin"),

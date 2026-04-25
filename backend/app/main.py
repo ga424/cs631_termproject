@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.db.session import get_db
-from app.api import auth, locations, customers, car_classes, models, vehicles, reservations, rentals, dashboard
+from app.api import auth, customer_portal, locations, customers, car_classes, models, vehicles, reservations, rentals, dashboard
 
 setup_logging(log_level=settings.log_level, use_json=settings.log_json)
 logger = logging.getLogger("app.main")
@@ -23,6 +23,7 @@ app = FastAPI(
 
 # Register resource routers under /api/v1/*.
 app.include_router(auth.router)
+app.include_router(customer_portal.router)
 app.include_router(locations.router)
 app.include_router(customers.router)
 app.include_router(car_classes.router)
@@ -132,6 +133,7 @@ async def api_version():
             "rental_agreements": "/api/v1/rental-agreements",
             "dashboard_overview": "/api/v1/dashboard/overview",
             "auth_login": "/api/v1/auth/login",
+            "customer_portal": "/api/v1/customer-portal",
         }
     }
 

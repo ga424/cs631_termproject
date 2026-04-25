@@ -110,7 +110,7 @@ def decode_access_token(token: str) -> StaffPrincipal:
     return StaffPrincipal(username=username, role=role)
 
 
-def require_staff(
+def require_authenticated(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
 ) -> StaffPrincipal:
     if credentials is None or credentials.scheme.lower() != "bearer":
@@ -120,6 +120,17 @@ def require_staff(
             headers={"WWW-Authenticate": "Bearer"},
         )
     return decode_access_token(credentials.credentials)
+
+
+def require_staff(
+    current_user: Annotated[StaffPrincipal, Depends(require_authenticated)],
+) -> StaffPrincipal:
+    if current_user.role not in {"agent", "manager", "admin"}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Staff role required for this operation",
+        )
+    return current_user
 
 
 def require_admin(current_user: Annotated[StaffPrincipal, Depends(require_staff)]) -> StaffPrincipal:
