@@ -185,6 +185,12 @@ def update_rental_agreement(
             detail="rental_end_date_time must be after rental_start_date_time",
         )
 
+    if rental_end and end_odometer is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="end_odometer_reading is required when closing a rental agreement",
+        )
+
     if end_odometer is not None and end_odometer < db_agreement.start_odometer_reading:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

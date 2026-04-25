@@ -182,3 +182,34 @@ def test_return_updates_car_odometer_and_exposes_customer_lifecycle_history():
         assert "BILLED" in event_types
     finally:
         app.dependency_overrides.clear()
+
+
+def test_return_requires_end_odometer_when_closing_rental():
+    override, _SessionLocal, ids = _override_lifecycle_db()
+    app.dependency_overrides[get_db] = override
+    try:
+        client = TestClient(app)
+        agent_headers = auth_headers(client, username="agent", password="agent123")
+        start_response = client.post(
+            "/api/v1/rental-agreements",
+            json={
+                "reservation_id": str(ids["reservation_id"]),
+                "vin": ids["vin"],
+                "rental_start_date_time": datetime.utcnow().replace(microsecond=0).isoformat(),
+            },
+            headers=agent_headers,
+        )
+        assert start_response.status_code == 201
+
+        response = client.put(
+            f"/api/v1/rental-agreements/{start_response.json()['contract_no']}",
+            json={
+                "rental_end_date_time": (datetime.utcnow().replace(microsecond=0) + timedelta(hours=4)).isoformat(),
+            },
+            headers=agent_headers,
+        )
+
+        assert response.status_code == 400
+        assert "end_odometer_reading is required" in response.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()
