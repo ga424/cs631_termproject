@@ -193,7 +193,7 @@ class Car(CarBase):
 
 
 # Reservation schemas
-ReservationStatus = Literal["ACTIVE", "CANCELED", "COMPLETED", "NO_SHOW"]
+ReservationStatus = Literal["ACTIVE", "CANCELED", "FULFILLED", "COMPLETED", "NO_SHOW"]
 
 
 class ReservationBase(BaseModel):
@@ -249,7 +249,7 @@ class Reservation(ReservationBase):
         status = value.strip().upper()
         # Backward compatibility with older seeded values.
         if status == "CONFIRMED":
-            return "COMPLETED"
+            return "FULFILLED"
         if status == "PENDING":
             return "ACTIVE"
         return status
@@ -266,8 +266,11 @@ class RentalAgreementBase(BaseModel):
     start_odometer_reading: int = Field(ge=0)
 
 
-class RentalAgreementCreate(RentalAgreementBase):
-    pass
+class RentalAgreementCreate(BaseModel):
+    reservation_id: UUID
+    vin: str
+    rental_start_date_time: datetime
+    start_odometer_reading: Optional[int] = Field(default=None, ge=0)
 
 
 class RentalAgreementUpdate(BaseModel):
@@ -291,6 +294,21 @@ class RentalAgreement(RentalAgreementBase):
         if self.end_odometer_reading is not None and self.end_odometer_reading < self.start_odometer_reading:
             raise ValueError("end_odometer_reading must be >= start_odometer_reading")
         return self
+
+    class Config:
+        from_attributes = True
+
+
+class RentalLifecycleEvent(BaseModel):
+    event_id: UUID
+    reservation_id: UUID
+    contract_no: Optional[UUID] = None
+    customer_id: UUID
+    event_type: Literal["RESERVED", "CANCELED", "NO_SHOW", "PICKED_UP", "RENTAL_OPENED", "RETURNED", "BILLED"]
+    actor_role: str
+    actor_username: str
+    event_timestamp: datetime
+    notes: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -408,5 +426,7 @@ class CustomerPortalBookingResponse(BaseModel):
 class CustomerPortalSummary(BaseModel):
     customer: Customer
     reservations: list[Reservation]
+    rental_agreements: list[RentalAgreement]
     active_rentals: list[RentalAgreement]
+    lifecycle_events: list[RentalLifecycleEvent]
     workflow: list[WorkflowStage]

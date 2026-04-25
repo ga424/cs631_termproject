@@ -204,6 +204,6 @@ def test_reservation_response_model_normalizes_legacy_status_values():
     pending = Reservation(**{**base, "reservation_status": "pending"})
     active = Reservation(**{**base, "reservation_status": "active"})
 
-    assert confirmed.reservation_status == "COMPLETED"
+    assert confirmed.reservation_status == "FULFILLED"
     assert pending.reservation_status == "ACTIVE"
     assert active.reservation_status == "ACTIVE"

@@ -17,7 +17,7 @@ from app.core.security import hash_password, normalize_username
 from app.db.base import Base
 from app.models.models import (
     Location, Customer, CustomerAccount, CarClass, Model, Car, 
-    Reservation, RentalAgreement
+    Reservation, RentalAgreement, RentalLifecycleEvent
 )
 
 DEMO_CUSTOMER_PASSWORD = "customer123"
@@ -230,6 +230,111 @@ def ensure_inactive_demo_customers(session):
     session.commit()
 
 
+def ensure_lifecycle_event(session, reservation, event_type, *, rental=None, actor_role="system", actor_username="seed", event_timestamp=None, notes=None):
+    """Create one deterministic lifecycle event for seeded demo records."""
+    query = (
+        session.query(RentalLifecycleEvent)
+        .filter(
+            RentalLifecycleEvent.reservation_id == reservation.reservation_id,
+            RentalLifecycleEvent.event_type == event_type,
+        )
+    )
+    if rental is not None:
+        query = query.filter(RentalLifecycleEvent.contract_no == rental.contract_no)
+    if query.first():
+        return
+
+    session.add(RentalLifecycleEvent(
+        reservation_id=reservation.reservation_id,
+        contract_no=rental.contract_no if rental else None,
+        customer_id=reservation.customer_id,
+        event_type=event_type,
+        actor_role=actor_role,
+        actor_username=actor_username,
+        event_timestamp=event_timestamp or reservation.pickup_date_time,
+        notes=notes,
+    ))
+
+
+def ensure_seed_lifecycle_events(session):
+    """Backfill demo reservations with lifecycle audit events and non-confusing statuses."""
+    reservations = session.query(Reservation).all()
+    rentals_by_reservation = {
+        rental.reservation_id: rental
+        for rental in session.query(RentalAgreement).all()
+    }
+
+    for reservation in reservations:
+        rental = rentals_by_reservation.get(reservation.reservation_id)
+        status = (reservation.reservation_status or "").upper()
+        if rental is not None and status in {"COMPLETED", "CONFIRMED", "ACTIVE"}:
+            reservation.reservation_status = "FULFILLED"
+
+        ensure_lifecycle_event(
+            session,
+            reservation,
+            "RESERVED",
+            actor_role="customer",
+            actor_username="seed.customer",
+            event_timestamp=reservation.created_at or reservation.pickup_date_time,
+            notes="Seeded customer reservation.",
+        )
+
+        if rental is not None:
+            ensure_lifecycle_event(
+                session,
+                reservation,
+                "PICKED_UP",
+                rental=rental,
+                actor_role="agent",
+                actor_username="agent",
+                event_timestamp=rental.rental_start_date_time,
+                notes=f"Seeded pickup assigned VIN {rental.vin} at odometer {rental.start_odometer_reading}.",
+            )
+            ensure_lifecycle_event(
+                session,
+                reservation,
+                "RENTAL_OPENED",
+                rental=rental,
+                actor_role="agent",
+                actor_username="agent",
+                event_timestamp=rental.rental_start_date_time,
+                notes="Seeded rental agreement opened.",
+            )
+            if rental.rental_end_date_time is not None:
+                ensure_lifecycle_event(
+                    session,
+                    reservation,
+                    "RETURNED",
+                    rental=rental,
+                    actor_role="agent",
+                    actor_username="agent",
+                    event_timestamp=rental.rental_end_date_time,
+                    notes=f"Seeded return at odometer {rental.end_odometer_reading}.",
+                )
+                ensure_lifecycle_event(
+                    session,
+                    reservation,
+                    "BILLED",
+                    rental=rental,
+                    actor_role="agent",
+                    actor_username="agent",
+                    event_timestamp=rental.rental_end_date_time,
+                    notes=f"Seeded final charge ${float(rental.actual_cost or 0):.2f}.",
+                )
+        elif status in {"CANCELED", "NO_SHOW"}:
+            ensure_lifecycle_event(
+                session,
+                reservation,
+                status,
+                actor_role="agent",
+                actor_username="agent",
+                notes=f"Seeded reservation marked {status.lower().replace('_', '-')}.",
+            )
+
+    session.commit()
+
+
 def create_engine_and_session():
     """Create database engine and session"""
     engine = create_engine(settings.database_url, pool_pre_ping=True)
@@ -249,6 +354,7 @@ def seed_database():
             customers = session.query(Customer).all()
             ensure_customer_accounts(session, customers)
             ensure_inactive_demo_customers(session)
+            ensure_seed_lifecycle_events(session)
             print_demo_summary(session)
             print("Sample data already exists in database. Skipping seed.")
             return
@@ -306,7 +412,7 @@ def seed_database():
         # Create Cars
         print("  - Adding vehicles...")
         cars = [
-            Car(vin="WBADT43452G942186", current_odometer_reading=15000, 
+            Car(vin="WBADT43452G942186", current_odometer_reading=15150, 
                 location_id=locations[0].location_id, model_name="Toyota Corolla"),
             Car(vin="WBADT43452G942187", current_odometer_reading=22000, 
                 location_id=locations[0].location_id, model_name="Honda Civic"),
@@ -385,7 +491,7 @@ def seed_database():
                 class_id=car_classes[0].class_id,
                 pickup_date_time=now + timedelta(days=1),
                 return_date_time_requested=now + timedelta(days=4),
-                reservation_status="COMPLETED"
+                reservation_status="FULFILLED"
             ),
             Reservation(
                 customer_id=customers[1].customer_id,
@@ -393,7 +499,7 @@ def seed_database():
                 class_id=car_classes[2].class_id,
                 pickup_date_time=now + timedelta(days=2),
                 return_date_time_requested=now + timedelta(days=9),
-                reservation_status="COMPLETED"
+                reservation_status="FULFILLED"
             ),
             Reservation(
                 customer_id=customers[2].customer_id,
@@ -456,6 +562,7 @@ def seed_database():
         ]
         session.add_all(rental_agreements)
         session.commit()
+        ensure_seed_lifecycle_events(session)
         
         print("\n✅ Sample data successfully created!")
         print(f"   - {len(locations)} locations")

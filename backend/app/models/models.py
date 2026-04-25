@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, String, Integer, DateTime, Numeric, ForeignKey
+from sqlalchemy import Boolean, Column, String, Integer, DateTime, Numeric, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from uuid import uuid4
@@ -48,6 +48,7 @@ class Customer(Base):
     # Relationships
     reservations = relationship("Reservation", back_populates="customer")
     account = relationship("CustomerAccount", back_populates="customer", uselist=False)
+    lifecycle_events = relationship("RentalLifecycleEvent", back_populates="customer")
 
     def __repr__(self):
         return f"<Customer(id={self.customer_id}, name={self.first_name} {self.last_name})>"
@@ -144,6 +145,7 @@ class Reservation(Base):
     location = relationship("Location", back_populates="reservations")
     car_class = relationship("CarClass", back_populates="reservations")
     rental_agreement = relationship("RentalAgreement", back_populates="reservation", uselist=False)
+    lifecycle_events = relationship("RentalLifecycleEvent", back_populates="reservation")
 
     def __repr__(self):
         return f"<Reservation(id={self.reservation_id}, customer={self.customer_id}, status={self.reservation_status})>"
@@ -166,6 +168,29 @@ class RentalAgreement(Base):
     # Relationships
     reservation = relationship("Reservation", back_populates="rental_agreement")
     car = relationship("Car", back_populates="rental_agreements")
+    lifecycle_events = relationship("RentalLifecycleEvent", back_populates="rental_agreement")
 
     def __repr__(self):
         return f"<RentalAgreement(id={self.contract_no}, car={self.vin}, status=active)>"
+
+
+class RentalLifecycleEvent(Base):
+    __tablename__ = "rental_lifecycle_event"
+
+    event_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    reservation_id = Column(UUID(as_uuid=True), ForeignKey("reservation.reservation_id"), nullable=False, index=True)
+    contract_no = Column(UUID(as_uuid=True), ForeignKey("rental_agreement.contract_no"), index=True)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey("customer.customer_id"), nullable=False, index=True)
+    event_type = Column(String(50), nullable=False, index=True)
+    actor_role = Column(String(50), nullable=False)
+    actor_username = Column(String(80), nullable=False)
+    event_timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    notes = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    reservation = relationship("Reservation", back_populates="lifecycle_events")
+    rental_agreement = relationship("RentalAgreement", back_populates="lifecycle_events")
+    customer = relationship("Customer", back_populates="lifecycle_events")
+
+    def __repr__(self):
+        return f"<RentalLifecycleEvent(type={self.event_type}, reservation={self.reservation_id})>"
