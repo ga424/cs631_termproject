@@ -8,7 +8,6 @@ import { MyTripTab } from "./MyTripTab";
 import { WorkflowTab } from "./WorkflowTab";
 
 const TABS = [
-  { id: "book", label: "Book" },
   { id: "trip", label: "My Trip" },
   { id: "workflow", label: "Workflow" },
 ];
@@ -16,7 +15,9 @@ const TABS = [
 export function CustomerPortal() {
   const { logout } = useAuth();
   const { catalog, summary, loading, error, success, setError, createBooking, refresh } = useCustomerPortal();
-  const [activeTab, setActiveTab] = useState("book");
+  const [activeTab, setActiveTab] = useState("trip");
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [autoOpenedEmptyTrip, setAutoOpenedEmptyTrip] = useState(false);
   const [form, setForm] = useState(CUSTOMER_BOOKING_DEFAULT_FORM);
 
   const locationById = useMemo(() => Object.fromEntries(catalog.locations.map((item) => [item.location_id, item])), [catalog.locations]);
@@ -44,6 +45,13 @@ export function CustomerPortal() {
     }));
   }, [summary?.customer]);
 
+  useEffect(() => {
+    if (!loading && summary && summary.reservations.length === 0 && summary.active_rentals.length === 0 && !autoOpenedEmptyTrip) {
+      setBookingOpen(true);
+      setAutoOpenedEmptyTrip(true);
+    }
+  }, [autoOpenedEmptyTrip, loading, summary]);
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     try {
@@ -62,6 +70,7 @@ export function CustomerPortal() {
         return_date_time_requested: "",
       }));
       setActiveTab("trip");
+      setBookingOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not complete booking.");
     }
@@ -79,9 +88,30 @@ export function CustomerPortal() {
     >
       <AlertStrip error={error} success={success} />
       {loading ? <div className="loading-strip">Syncing customer data…</div> : null}
-      {activeTab === "book" ? <BookTab catalog={catalog} form={form} onChange={setForm} onSubmit={submit} /> : null}
-      {activeTab === "trip" ? <MyTripTab summary={summary} locationById={locationById} classById={classById} onRefresh={() => void refresh()} /> : null}
+      {activeTab === "trip" ? (
+        <MyTripTab
+          summary={summary}
+          locationById={locationById}
+          classById={classById}
+          onRefresh={() => void refresh()}
+          onReserve={() => setBookingOpen(true)}
+        />
+      ) : null}
       {activeTab === "workflow" ? <WorkflowTab catalog={catalog} summary={summary} /> : null}
+      {bookingOpen ? (
+        <div className="drawer-backdrop" role="dialog" aria-modal="true" aria-label="Reserve a car">
+          <aside className="booking-drawer">
+            <div className="surface-head">
+              <div>
+                <p className="eyebrow">Reserve A Car</p>
+                <h2>Book a reservation</h2>
+              </div>
+              <button type="button" className="ghost-button" onClick={() => setBookingOpen(false)}>Close</button>
+            </div>
+            <BookTab catalog={catalog} form={form} onChange={setForm} onSubmit={submit} />
+          </aside>
+        </div>
+      ) : null}
     </MobileLayout>
   );
 }

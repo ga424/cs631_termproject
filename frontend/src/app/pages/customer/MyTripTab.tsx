@@ -8,11 +8,13 @@ export function MyTripTab({
   locationById,
   classById,
   onRefresh,
+  onReserve,
 }: {
   summary: CustomerPortalSummary | null;
   locationById: Record<string, Location>;
   classById: Record<string, CarClass>;
   onRefresh: () => void;
+  onReserve: () => void;
 }) {
   const activeRental = summary?.active_rentals[0];
   const reservation = summary?.reservations[0];
@@ -30,7 +32,10 @@ export function MyTripTab({
           <h2>My Reservation And Rental</h2>
           <p>{nextAction}</p>
         </div>
-        <button type="button" className="ghost-button" onClick={onRefresh}>Refresh</button>
+        <div className="action-strip inline-actions">
+          <button type="button" className="ghost-button" onClick={onRefresh}>Refresh</button>
+          <button type="button" onClick={onReserve}>Reserve A Car</button>
+        </div>
       </div>
       {summary ? (
         <div className="stack-area">
@@ -66,7 +71,10 @@ export function MyTripTab({
           />
         </div>
       ) : (
-        <div className="empty-block">Create a reservation to unlock trip tracking.</div>
+        <div className="empty-block">
+          <p>Create a reservation to unlock trip tracking.</p>
+          <button type="button" onClick={onReserve}>Reserve A Car</button>
+        </div>
       )}
     </section>
   );
