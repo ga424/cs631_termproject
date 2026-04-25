@@ -75,7 +75,8 @@ test("customer can book and track a reservation", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/customer$/);
   await expect(page.getByText(/reservation booked/i)).toBeVisible();
-  await expect(page.getByRole("heading", { name: /trip status/i })).toBeVisible();
+  await expect(page.getByText(/trip status/i)).toBeVisible();
+  await expect(page.getByText(/reservation journey/i)).toBeVisible();
 });
 
 test("agent can intake, start pickup, and close a rental", async ({ page }) => {

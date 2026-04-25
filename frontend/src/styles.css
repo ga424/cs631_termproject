@@ -636,6 +636,40 @@ select {
   box-shadow: -24px 0 42px -34px rgba(15, 23, 42, 0.8);
 }
 
+.reservation-journey {
+  gap: 16px;
+}
+
+.journey-steps {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.journey-steps li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(221, 213, 200, 0.78);
+  background: var(--surface-soft);
+}
+
+.journey-steps strong,
+.journey-steps span {
+  display: block;
+}
+
+.journey-steps span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
 .inline-actions {
   justify-content: end;
   margin-top: 0;
@@ -798,6 +832,55 @@ select {
   color: var(--accent-dark);
 }
 
+.reservation-board {
+  display: grid;
+  gap: 12px;
+}
+
+.reservation-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.reservation-drilldown {
+  border-radius: 16px;
+  border: 1px solid rgba(221, 213, 200, 0.82);
+  background: var(--surface-soft);
+  overflow: hidden;
+}
+
+.reservation-drilldown summary {
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+}
+
+.reservation-drilldown summary strong,
+.reservation-drilldown summary small,
+.reservation-drilldown summary em {
+  display: block;
+}
+
+.reservation-drilldown summary small,
+.reservation-drilldown summary em {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-style: normal;
+}
+
+.reservation-detail-grid {
+  display: grid;
+  gap: 10px;
+  padding: 0 14px 14px;
+}
+
+.reservation-drilldown .tracker-card {
+  margin: 0 14px 14px;
+}
+
 .journey-card,
 .trip-board {
   border-color: color-mix(in srgb, var(--accent) 24%, var(--line));
@@ -806,10 +889,10 @@ select {
 .drawer-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 30;
+  z-index: 50;
   background: rgba(19, 32, 51, 0.42);
-  display: flex;
-  justify-content: flex-end;
+  display: grid;
+  justify-items: end;
 }
 
 .profile-drawer {
