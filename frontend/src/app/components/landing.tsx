@@ -79,21 +79,25 @@ export function PersonaSelector({
   selectedRole: string;
   onSelect: (role: Role) => void;
 }) {
+  const staffRoles = new Set(["agent", "manager", "admin"]);
   return (
     <div className="persona-cards login-personas" aria-label="Persona selector">
-      {(Object.entries(ROLE_COPY) as Array<[Role, (typeof ROLE_COPY)[Role]]>).map(([role, copy]) => (
-        <button
-          key={role}
-          type="button"
-          aria-label={copy.surface}
-          className={selectedRole === role ? `persona-card login-persona ${copy.tone} active` : `persona-card login-persona ${copy.tone}`}
-          onClick={() => onSelect(role)}
-        >
-          <span className="persona-icon">{copy.icon}</span>
-          <strong>{copy.title}</strong>
-          <small>{copy.subtitle}</small>
-        </button>
-      ))}
+      {(Object.entries(ROLE_COPY) as Array<[Role, (typeof ROLE_COPY)[Role]]>).map(([role, copy]) => {
+        const active = selectedRole === role || (role === "customer" && !staffRoles.has(selectedRole));
+        return (
+          <button
+            key={role}
+            type="button"
+            aria-label={copy.surface}
+            className={active ? `persona-card login-persona ${copy.tone} active` : `persona-card login-persona ${copy.tone}`}
+            onClick={() => onSelect(role)}
+          >
+            <span className="persona-icon">{copy.icon}</span>
+            <strong>{copy.title}</strong>
+            <small>{copy.subtitle}</small>
+          </button>
+        );
+      })}
     </div>
   );
 }
