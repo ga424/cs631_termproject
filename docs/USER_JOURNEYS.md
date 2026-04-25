@@ -64,15 +64,17 @@ sequenceDiagram
 ```mermaid
 stateDiagram-v2
 	[*] --> ACTIVE: Reservation created
-	ACTIVE --> COMPLETED: Converted to rental agreement
+	ACTIVE --> FULFILLED: Converted to rental agreement
 	ACTIVE --> CANCELED: Customer/branch cancels
 	ACTIVE --> NO_SHOW: Customer does not arrive
 
-	state COMPLETED {
+	state FULFILLED {
 		[*] --> RENTAL_OPEN
 		RENTAL_OPEN --> RENTAL_CLOSED: Vehicle returned and billed
 	}
 ```
+
+`FULFILLED` means the reservation produced a rental agreement. It does not mean the customer has returned the vehicle. A customer-facing trip is still an active rental while the rental agreement has no `rental_end_date_time`.
 
 ## Journey 1: Reservation By Phone (Pre-Arrival)
 
