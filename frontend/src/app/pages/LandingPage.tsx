@@ -72,6 +72,12 @@ export function LandingPage() {
       selectDemoCustomer(demoCustomers[0]);
       return;
     }
+    if (role === "customer") {
+      setForm({ username: "john.doe", password: DEMO_CUSTOMER_PASSWORD });
+      setError("");
+      setSuccess("Loaded the default demo customer login.");
+      return;
+    }
     setForm({ username: role, password: `${role}123` });
     setError("");
     setSuccess("");
@@ -104,7 +110,7 @@ export function LandingPage() {
     setError("");
     try {
       const session = await api.signupCustomer({
-      const session = await signupCustomer({
+      await signupCustomer({
         ...signupForm,
         exp_month: Number(signupForm.exp_month),
         exp_year: Number(signupForm.exp_year),

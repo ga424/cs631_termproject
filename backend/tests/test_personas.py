@@ -1,19 +1,71 @@
 from pathlib import Path
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
+from app.core.security import hash_password
+from app.db.base import Base
+from app.db.session import get_db
 from app.main import app
+from app.models.models import Customer, CustomerAccount
 from app.schemas import CustomerCreate
 from conftest import auth_headers
+
+
+def _override_db_with_customer_account():
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
+    session = TestingSessionLocal()
+    customer = Customer(
+        first_name="John",
+        last_name="Doe",
+        street="100 Oak Lane",
+        city="Newark",
+        state="NJ",
+        zip="07102",
+        license_number=f"NJ-{uuid4()}",
+        license_state="NJ",
+        credit_card_type="Visa",
+        credit_card_number="4111111111111111",
+        exp_month=12,
+        exp_year=2028,
+    )
+    session.add(customer)
+    session.flush()
+    session.add(CustomerAccount(
+        customer_id=customer.customer_id,
+        username="john.doe",
+        password_hash=hash_password("customer123"),
+        is_active=True,
+    ))
+    customer_id = customer.customer_id
+    session.commit()
+    session.close()
+
+    def _dependency_override():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    return _dependency_override, customer_id
 
 
 def test_staff_personas_can_login_with_expected_roles():
     client = TestClient(app)
 
     for username, password, role in [
-        ("customer", "customer123", "customer"),
         ("agent", "agent123", "agent"),
         ("manager", "manager123", "manager"),
         ("admin", "admin123", "admin"),
@@ -28,6 +80,88 @@ def test_staff_personas_can_login_with_expected_roles():
         assert payload["username"] == username
         assert payload["role"] == role
         assert payload["token_type"] == "bearer"
+
+
+def test_db_customer_account_can_login_with_customer_identity():
+    override, customer_id = _override_db_with_customer_account()
+    app.dependency_overrides[get_db] = override
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "john.doe", "password": "customer123"},
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["username"] == "john.doe"
+        assert payload["role"] == "customer"
+        assert payload["customer_id"] == str(customer_id)
+        assert payload["account_id"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_customer_cannot_read_another_customer_portal_summary():
+    override, _customer_id = _override_db_with_customer_account()
+    app.dependency_overrides[get_db] = override
+    try:
+        client = TestClient(app)
+        headers = auth_headers(client, username="john.doe", password="customer123")
+        response = client.get(f"/api/v1/customer-portal/summary/{uuid4()}", headers=headers)
+
+        assert response.status_code == 403
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_customer_signup_creates_customer_account_session():
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    def _dependency_override():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = _dependency_override
+    try:
+        client = TestClient(app)
+        payload = {
+            "username": "new.customer",
+            "password": "customer123",
+            "first_name": "New",
+            "last_name": "Customer",
+            "street": "20 Market St",
+            "city": "Newark",
+            "state": "NJ",
+            "zip": "07102",
+            "license_number": "NJ-SIGNUP-1",
+            "license_state": "NJ",
+            "credit_card_type": "Visa",
+            "credit_card_number": "4111111111111111",
+            "exp_month": 12,
+            "exp_year": 2028,
+        }
+        response = client.post("/api/v1/auth/customer-signup", json=payload)
+
+        assert response.status_code == 201
+        body = response.json()
+        assert body["role"] == "customer"
+        assert body["username"] == "new.customer"
+        assert body["customer_id"]
+
+        duplicate = client.post("/api/v1/auth/customer-signup", json=payload)
+        assert duplicate.status_code == 409
+    finally:
+        app.dependency_overrides.clear()
 
 
 def test_customer_persona_data_is_captured_as_valid_customer_record():
@@ -109,3 +243,21 @@ def test_database_changelog_contains_business_constraints():
         "chk_rental_odometer_order",
     ]:
         assert constraint in changelog
+
+
+def test_database_changelog_contains_customer_account_linkage():
+    project_root = Path(__file__).resolve().parents[2]
+    changelog_path = project_root / "database/migrations/04-create-customer-accounts.xml"
+    if not changelog_path.exists():
+        pytest.skip("database migrations directory is not mounted in this test container")
+
+    changelog = changelog_path.read_text()
+
+    for expected in [
+        "customer_account",
+        "fk_customer_account_customer",
+        "unique=\"true\"",
+        "idx_customer_account_username",
+        "chk_customer_account_username",
+    ]:
+        assert expected in changelog
