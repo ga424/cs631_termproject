@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, Numeric, ForeignKey, CheckConstraint, func
+from sqlalchemy import Boolean, Column, String, Integer, DateTime, Numeric, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from uuid import uuid4
@@ -47,9 +47,28 @@ class Customer(Base):
 
     # Relationships
     reservations = relationship("Reservation", back_populates="customer")
+    account = relationship("CustomerAccount", back_populates="customer", uselist=False)
 
     def __repr__(self):
         return f"<Customer(id={self.customer_id}, name={self.first_name} {self.last_name})>"
+
+
+class CustomerAccount(Base):
+    __tablename__ = "customer_account"
+
+    account_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey("customer.customer_id"), nullable=False, unique=True, index=True)
+    username = Column(String(80), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    last_login_at = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    customer = relationship("Customer", back_populates="account")
+
+    def __repr__(self):
+        return f"<CustomerAccount(id={self.account_id}, username={self.username}, customer={self.customer_id})>"
 
 
 class CarClass(Base):
