@@ -48,6 +48,28 @@ def _override_db_with_customer_account():
         password_hash=hash_password("customer123"),
         is_active=True,
     ))
+    inactive_customer = Customer(
+        first_name="Nina",
+        last_name="Nohistory",
+        street="710 Demo Plaza",
+        city="Newark",
+        state="NJ",
+        zip="07102",
+        license_number=f"NJ-{uuid4()}",
+        license_state="NJ",
+        credit_card_type="Visa",
+        credit_card_number="4111111111111111",
+        exp_month=11,
+        exp_year=2028,
+    )
+    session.add(inactive_customer)
+    session.flush()
+    session.add(CustomerAccount(
+        customer_id=inactive_customer.customer_id,
+        username="nina.nohistory",
+        password_hash=hash_password("customer123"),
+        is_active=False,
+    ))
     customer_id = customer.customer_id
     session.commit()
     session.close()
@@ -98,6 +120,40 @@ def test_db_customer_account_can_login_with_customer_identity():
         assert payload["role"] == "customer"
         assert payload["customer_id"] == str(customer_id)
         assert payload["account_id"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_inactive_customer_account_cannot_login():
+    override, _customer_id = _override_db_with_customer_account()
+    app.dependency_overrides[get_db] = override
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "nina.nohistory", "password": "customer123"},
+        )
+
+        assert response.status_code == 401
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_demo_customer_list_includes_safe_active_and_inactive_metadata():
+    override, _customer_id = _override_db_with_customer_account()
+    app.dependency_overrides[get_db] = override
+    try:
+        client = TestClient(app)
+        response = client.get("/api/v1/auth/demo-customers")
+
+        assert response.status_code == 200
+        payload = response.json()
+        by_username = {item["username"]: item for item in payload}
+        assert by_username["john.doe"]["is_active"] is True
+        assert by_username["nina.nohistory"]["is_active"] is False
+        assert by_username["nina.nohistory"]["reservation_count"] == 0
+        assert "credit_card_number" not in by_username["john.doe"]
+        assert "license_number" not in by_username["john.doe"]
     finally:
         app.dependency_overrides.clear()
 
