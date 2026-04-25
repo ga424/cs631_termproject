@@ -1,4 +1,4 @@
-import type { Role } from "../lib/types";
+import type { CustomerDemoAccount, Role } from "../lib/types";
 import { AlertStrip } from "./ui";
 
 export const ROLE_COPY: Record<Role, { title: string; surface: string; subtitle: string; icon: string; tone: string }> = {
@@ -35,6 +35,23 @@ export const ROLE_COPY: Record<Role, { title: string; surface: string; subtitle:
 export type LoginFormState = {
   username: string;
   password: string;
+};
+
+export type CustomerSignupFormState = {
+  username: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+  license_number: string;
+  license_state: string;
+  credit_card_type: string;
+  credit_card_number: string;
+  exp_month: string;
+  exp_year: string;
 };
 
 export function MilanBrandHeader() {
@@ -122,6 +139,82 @@ export function SignInPanel({
       </label>
       <button type="submit" disabled={loading || !form.username || !form.password}>
         {loading ? "Signing in..." : "Sign In"}
+      </button>
+    </form>
+  );
+}
+
+export function DemoCustomerSelector({
+  customers,
+  loading,
+  selectedUsername,
+  onSelect,
+}: {
+  customers: CustomerDemoAccount[];
+  loading: boolean;
+  selectedUsername: string;
+  onSelect: (customer: CustomerDemoAccount) => void;
+}) {
+  return (
+    <section className="demo-customer-panel" aria-label="Demo customer accounts">
+      <div className="demo-panel-head">
+        <p className="eyebrow">Seeded Customers</p>
+        <h2>Preview the portal as a real customer</h2>
+      </div>
+      {loading ? <div className="loading-strip">Loading customer accounts...</div> : null}
+      <div className="demo-customer-grid">
+        {customers.map((customer) => (
+          <button
+            key={customer.customer_id}
+            type="button"
+            className={selectedUsername === customer.username ? "demo-customer-card active" : "demo-customer-card"}
+            onClick={() => onSelect(customer)}
+          >
+            <strong>{customer.display_name}</strong>
+            <span>{customer.username}</span>
+            <small>{customer.trip_status} · {customer.reservation_count} trips</small>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export function SignupPanel({
+  form,
+  loading,
+  onChange,
+  onSubmit,
+}: {
+  form: CustomerSignupFormState;
+  loading: boolean;
+  onChange: (form: CustomerSignupFormState) => void;
+  onSubmit: (event: React.FormEvent) => void;
+}) {
+  return (
+    <form className="customer-signup-panel" onSubmit={onSubmit}>
+      <div className="demo-panel-head">
+        <p className="eyebrow">New Customer</p>
+        <h2>Create a customer account</h2>
+      </div>
+      <div className="field-grid two-col">
+        <input placeholder="Username" value={form.username} onChange={(e) => onChange({ ...form, username: e.target.value })} required minLength={3} />
+        <input placeholder="Password" type="password" value={form.password} onChange={(e) => onChange({ ...form, password: e.target.value })} required minLength={8} />
+        <input placeholder="First name" value={form.first_name} onChange={(e) => onChange({ ...form, first_name: e.target.value })} required />
+        <input placeholder="Last name" value={form.last_name} onChange={(e) => onChange({ ...form, last_name: e.target.value })} required />
+        <input placeholder="Street" value={form.street} onChange={(e) => onChange({ ...form, street: e.target.value })} required />
+        <input placeholder="City" value={form.city} onChange={(e) => onChange({ ...form, city: e.target.value })} required />
+        <input placeholder="State" value={form.state} onChange={(e) => onChange({ ...form, state: e.target.value.toUpperCase().slice(0, 2) })} required />
+        <input placeholder="ZIP" value={form.zip} onChange={(e) => onChange({ ...form, zip: e.target.value })} required />
+        <input placeholder="License number" value={form.license_number} onChange={(e) => onChange({ ...form, license_number: e.target.value })} required />
+        <input placeholder="License state" value={form.license_state} onChange={(e) => onChange({ ...form, license_state: e.target.value.toUpperCase().slice(0, 2) })} required />
+        <input placeholder="Card type" value={form.credit_card_type} onChange={(e) => onChange({ ...form, credit_card_type: e.target.value })} required />
+        <input placeholder="Card number" value={form.credit_card_number} onChange={(e) => onChange({ ...form, credit_card_number: e.target.value })} required />
+        <input placeholder="Exp month" type="number" min="1" max="12" value={form.exp_month} onChange={(e) => onChange({ ...form, exp_month: e.target.value })} required />
+        <input placeholder="Exp year" type="number" min={new Date().getFullYear()} value={form.exp_year} onChange={(e) => onChange({ ...form, exp_year: e.target.value })} required />
+      </div>
+      <button type="submit" disabled={loading}>
+        {loading ? "Creating..." : "Create Account"}
       </button>
     </form>
   );

@@ -75,7 +75,7 @@ select {
 }
 
 .milan-login-shell {
-  width: min(100%, 448px);
+  width: min(100%, 1120px);
   display: grid;
   gap: 30px;
 }
@@ -156,6 +156,8 @@ select {
 .milan-login-stack {
   display: grid;
   gap: 18px;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(320px, 1fr);
+  align-items: start;
 }
 
 .login-personas {
@@ -221,6 +223,58 @@ select {
   padding: 22px;
   border-radius: 16px;
   gap: 16px;
+}
+
+.demo-customer-panel,
+.customer-signup-panel {
+  padding: 22px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid rgba(221, 213, 200, 0.86);
+  box-shadow: var(--shadow);
+}
+
+.demo-panel-head {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.demo-panel-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.demo-customer-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.demo-customer-card {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  padding: 13px;
+  text-align: left;
+  border-radius: 12px;
+  border: 1px solid rgba(20, 184, 166, 0.24);
+  background: #f8fffd;
+}
+
+.demo-customer-card.active {
+  border-color: #14b8a6;
+  box-shadow: inset 4px 0 0 #14b8a6;
+}
+
+.demo-customer-card span,
+.demo-customer-card small {
+  color: var(--muted);
+}
+
+.customer-signup-panel {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 14px;
 }
 
 .milan-login-footnote {

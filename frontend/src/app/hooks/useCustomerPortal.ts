@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
-import { getStoredCustomerPortalId, setStoredCustomerPortalId } from "../lib/storage";
 import type { CustomerPortalBookingRequest, CustomerPortalCatalog, CustomerPortalSummary } from "../lib/types";
 
 const EMPTY_CATALOG: CustomerPortalCatalog = {
@@ -12,30 +11,26 @@ const EMPTY_CATALOG: CustomerPortalCatalog = {
 export function useCustomerPortal() {
   const [catalog, setCatalog] = useState<CustomerPortalCatalog>(EMPTY_CATALOG);
   const [summary, setSummary] = useState<CustomerPortalSummary | null>(null);
-  const [customerPortalId, setCustomerPortalId] = useState<string>(() => getStoredCustomerPortalId());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const refresh = useCallback(async (portalId?: string) => {
+  const refresh = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const catalogResponse = await api.getCustomerPortalCatalog();
+      const [catalogResponse, summaryResponse] = await Promise.all([
+        api.getCustomerPortalCatalog(),
+        api.getMyCustomerPortalSummary(),
+      ]);
       setCatalog(catalogResponse);
-      const currentPortalId = portalId ?? customerPortalId;
-      if (currentPortalId) {
-        const summaryResponse = await api.getCustomerPortalSummary(currentPortalId);
-        setSummary(summaryResponse);
-      } else {
-        setSummary(null);
-      }
+      setSummary(summaryResponse);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load customer portal data.");
     } finally {
       setLoading(false);
     }
-  }, [customerPortalId]);
+  }, []);
 
   useEffect(() => {
     void refresh();
@@ -43,11 +38,9 @@ export function useCustomerPortal() {
 
   const createBooking = useCallback(async (payload: CustomerPortalBookingRequest) => {
     const response = await api.createCustomerBooking(payload);
-    setStoredCustomerPortalId(response.customer_id);
-    setCustomerPortalId(response.customer_id);
     setSuccess(`Reservation booked for ${response.reservation.reservation_id.slice(0, 8)}.`);
     setError("");
-    await refresh(response.customer_id);
+    await refresh();
     return response;
   }, [refresh]);
 
@@ -59,7 +52,6 @@ export function useCustomerPortal() {
     success,
     setError,
     setSuccess,
-    customerPortalId,
     createBooking,
     refresh,
   };

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useCustomerPortal } from "../../hooks/useCustomerPortal";
 import { MobileLayout } from "../../components/MobileLayout";
@@ -22,6 +22,28 @@ export function CustomerPortal() {
   const locationById = useMemo(() => Object.fromEntries(catalog.locations.map((item) => [item.location_id, item])), [catalog.locations]);
   const classById = useMemo(() => Object.fromEntries(catalog.car_classes.map((item) => [item.class_id, item])), [catalog.car_classes]);
 
+  useEffect(() => {
+    if (!summary?.customer) {
+      return;
+    }
+    const customer = summary.customer;
+    setForm((current) => ({
+      ...current,
+      first_name: customer.first_name,
+      last_name: customer.last_name,
+      street: customer.street,
+      city: customer.city,
+      state: customer.state,
+      zip: customer.zip,
+      license_number: customer.license_number,
+      license_state: customer.license_state,
+      credit_card_type: customer.credit_card_type,
+      credit_card_number: customer.credit_card_number,
+      exp_month: String(customer.exp_month),
+      exp_year: String(customer.exp_year),
+    }));
+  }, [summary?.customer]);
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     try {
@@ -32,7 +54,13 @@ export function CustomerPortal() {
         pickup_date_time: new Date(form.pickup_date_time).toISOString(),
         return_date_time_requested: new Date(form.return_date_time_requested).toISOString(),
       });
-      setForm(CUSTOMER_BOOKING_DEFAULT_FORM);
+      setForm((current) => ({
+        ...current,
+        location_id: "",
+        class_id: "",
+        pickup_date_time: "",
+        return_date_time_requested: "",
+      }));
       setActiveTab("trip");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not complete booking.");

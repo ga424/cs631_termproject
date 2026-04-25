@@ -8,10 +8,12 @@ import {
   type AuthSession,
 } from "../lib/storage";
 import type { LoginRequest } from "../lib/types";
+import type { CustomerSignupRequest } from "../lib/types";
 
 type AuthContextValue = {
   session: AuthSession | null;
   login: (payload: LoginRequest) => Promise<AuthSession>;
+  signupCustomer: (payload: CustomerSignupRequest) => Promise<AuthSession>;
   logout: () => void;
 };
 
@@ -24,6 +26,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     async login(payload) {
       const authSession = await api.login(payload) as AuthSession;
+      setStoredAuthSession(authSession);
+      setSession(authSession);
+      return authSession;
+    },
+    async signupCustomer(payload) {
+      const authSession = await api.signupCustomer(payload) as AuthSession;
       setStoredAuthSession(authSession);
       setSession(authSession);
       return authSession;
