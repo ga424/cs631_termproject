@@ -14,6 +14,15 @@ from app.api import auth, customer_portal, locations, customers, car_classes, mo
 setup_logging(log_level=settings.log_level, use_json=settings.log_json)
 logger = logging.getLogger("app.main")
 
+
+def request_area(path: str) -> str:
+    """Return the stable API area used for request log grouping."""
+    path_parts = [part for part in path.split("/") if part]
+    if len(path_parts) >= 3 and path_parts[0] == "api" and path_parts[1] == "v1":
+        return path_parts[2]
+    return path_parts[0] if path_parts else "root"
+
+
 # Create FastAPI app
 app = FastAPI(
     title=settings.app_name,
@@ -47,42 +56,38 @@ async def on_startup():
 
 @app.middleware("http")
 async def log_requests(request, call_next):
-    """Log each incoming request with status code, duration, and service context."""
+    """Log each incoming request with status code, duration, and API area."""
     start_time = time.perf_counter()
     client = getattr(request, "client", None)
     client_host = client.host if client else "unknown"
     path = request.url.path
     method = request.method
-    
-    # Extract service name from path (e.g., /api/v1/customers -> customers)
-    path_parts = path.split('/')
-    service = path_parts[-1] if len(path_parts) > 1 else "root"
+    area = request_area(path)
     
     try:
         response = await call_next(request)
         status_code = response.status_code
-    except Exception as e:
+    except Exception:
         logger.exception(
-            "[%s] %s %s %s -> ERROR (unhandled exception)",
+            "[%s] %s %s area=%s -> ERROR (unhandled exception)",
             client_host,
             method,
             path,
-            service,
+            area,
         )
         raise
 
     duration_ms = (time.perf_counter() - start_time) * 1000
     
-    # Log with more context
     log_level = "info" if 200 <= status_code < 400 else "warning" if 400 <= status_code < 500 else "error"
     log_func = getattr(logger, log_level)
     
     log_func(
-        "[%s] %s %s (%s) -> %d (%.2f ms)",
+        "[%s] %s %s area=%s -> %d (%.2f ms)",
         client_host,
         method,
         path,
-        service,
+        area,
         status_code,
         duration_ms,
     )
