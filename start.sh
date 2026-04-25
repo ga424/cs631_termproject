@@ -27,6 +27,7 @@ Commands:
     seed            Seed database with sample test data
     e2e-dashboard   Backward-compatible alias for the mobile UI E2E smoke test
     e2e-ui          Seed DB and run frontend mobile UI E2E smoke test
+    e2e-live        Seed DB and run live Docker-backed persona job E2E tests
     frontend-build  Run a local production build of the routed frontend
     scan            Run Trivy security scan
     test            Run backend tests with coverage
@@ -139,6 +140,15 @@ case "${1:-help}" in
         docker-compose exec -T api python seed_data.py
         echo -e "${GREEN}Running mobile UI E2E test...${NC}"
         (cd frontend && npm ci && npm run test:e2e:install && npm run test:e2e)
+        ;;
+    e2e-live)
+        # Validates each persona against Docker Compose services and seeded Postgres data.
+        echo -e "${GREEN}Ensuring services are up...${NC}"
+        docker-compose up -d --build
+        echo -e "${GREEN}Seeding database with sample data...${NC}"
+        docker-compose exec -T api python seed_data.py
+        echo -e "${GREEN}Running live persona E2E tests...${NC}"
+        (cd frontend && npm ci && npm run test:e2e:install && npm run test:e2e:live)
         ;;
     frontend-build)
         # Builds the routed frontend locally to catch integration regressions quickly.

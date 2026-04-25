@@ -310,6 +310,7 @@ The committed Playwright suite mocks the API responses needed for persona routin
 - Run backend tests without touching generated coverage output: `cd backend && python3 -m pytest --no-cov`
 - Run the routed frontend smoke test with `cd frontend && npm run build`
 - Run persona E2E with `cd frontend && npm run test:e2e`
+- Run live Docker-backed persona job E2E with `./start.sh e2e-live`
 - Review workflow mapping in `docs/BPMN_WORKFLOWS.md`
 
 ---

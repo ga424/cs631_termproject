@@ -299,6 +299,9 @@ curl http://localhost:8000/api/v1
 # Run end-to-end mobile UI test
 ./start.sh e2e-ui
 
+# Run live Docker-backed persona job E2E tests
+./start.sh e2e-live
+
 # Build the frontend locally
 cd frontend && npm run build
 
@@ -382,6 +385,13 @@ npm run test:e2e
 
 The Playwright config starts the Vite dev server automatically. Keep the backend/API available when exercising screens that load live API data.
 The committed Playwright suite is a persona-routing smoke test and mocks the API responses it needs; use the Docker demo path to test against live seeded backend data.
+
+Live persona job checks:
+```bash
+./start.sh e2e-live
+```
+
+This starts Docker Compose, seeds Postgres, and runs browser tests for customer booking/trip tracking, agent intake/pickup/return, manager monitoring, and admin fleet/pricing controls.
 
 ## Database
 
