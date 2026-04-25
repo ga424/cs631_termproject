@@ -60,7 +60,9 @@ async function signInAs(page, role) {
       body: JSON.stringify({
         customer: testCustomer,
         reservations: [],
+        rental_agreements: [],
         active_rentals: [],
+        lifecycle_events: [],
         workflow: []
       })
     });

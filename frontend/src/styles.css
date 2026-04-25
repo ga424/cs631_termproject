@@ -877,6 +877,31 @@ select {
   padding: 0 14px 14px;
 }
 
+.audit-timeline {
+  display: grid;
+  gap: 10px;
+  margin: 0 14px 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.audit-timeline li {
+  border-left: 3px solid var(--accent);
+  padding: 0 0 0 12px;
+}
+
+.audit-timeline strong,
+.audit-timeline span {
+  display: block;
+}
+
+.audit-timeline span,
+.audit-timeline p {
+  color: var(--muted);
+  font-size: 0.84rem;
+  margin: 2px 0 0;
+}
+
 .reservation-drilldown .tracker-card {
   margin: 0 14px 14px;
 }

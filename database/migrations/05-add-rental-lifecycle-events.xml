@@ -1,0 +1,95 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="05-add-rental-lifecycle-events" author="cs631-team">
+        <comment>Add fulfilled reservation state and durable rental lifecycle audit events</comment>
+
+        <sql>
+            ALTER TABLE reservation DROP CONSTRAINT IF EXISTS chk_reservation_status;
+        </sql>
+
+        <sql>
+            UPDATE reservation
+            SET reservation_status = 'FULFILLED'
+            WHERE UPPER(reservation_status) IN ('COMPLETED', 'CONFIRMED')
+              AND EXISTS (
+                  SELECT 1
+                  FROM rental_agreement
+                  WHERE rental_agreement.reservation_id = reservation.reservation_id
+              );
+        </sql>
+
+        <sql>
+            ALTER TABLE reservation
+            ADD CONSTRAINT chk_reservation_status
+            CHECK (reservation_status IN ('ACTIVE', 'CANCELED', 'FULFILLED', 'COMPLETED', 'NO_SHOW'));
+        </sql>
+
+        <createTable tableName="rental_lifecycle_event">
+            <column name="event_id" type="UUID" defaultValueComputed="uuid_generate_v4()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="reservation_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_lifecycle_event_reservation" references="reservation(reservation_id)"/>
+            </column>
+            <column name="contract_no" type="UUID">
+                <constraints foreignKeyName="fk_lifecycle_event_rental_agreement" references="rental_agreement(contract_no)"/>
+            </column>
+            <column name="customer_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_lifecycle_event_customer" references="customer(customer_id)"/>
+            </column>
+            <column name="event_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="actor_role" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="actor_username" type="VARCHAR(80)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="event_timestamp" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <sql>
+            ALTER TABLE rental_lifecycle_event
+            ADD CONSTRAINT chk_lifecycle_event_type
+            CHECK (event_type IN ('RESERVED', 'CANCELED', 'NO_SHOW', 'PICKED_UP', 'RENTAL_OPENED', 'RETURNED', 'BILLED'));
+        </sql>
+
+        <createIndex indexName="idx_lifecycle_event_reservation" tableName="rental_lifecycle_event">
+            <column name="reservation_id"/>
+        </createIndex>
+        <createIndex indexName="idx_lifecycle_event_contract" tableName="rental_lifecycle_event">
+            <column name="contract_no"/>
+        </createIndex>
+        <createIndex indexName="idx_lifecycle_event_customer" tableName="rental_lifecycle_event">
+            <column name="customer_id"/>
+        </createIndex>
+        <createIndex indexName="idx_lifecycle_event_type" tableName="rental_lifecycle_event">
+            <column name="event_type"/>
+        </createIndex>
+        <createIndex indexName="idx_lifecycle_event_timestamp" tableName="rental_lifecycle_event">
+            <column name="event_timestamp"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="rental_lifecycle_event"/>
+            <sql>
+                ALTER TABLE reservation DROP CONSTRAINT IF EXISTS chk_reservation_status;
+                ALTER TABLE reservation
+                ADD CONSTRAINT chk_reservation_status
+                CHECK (reservation_status IN ('ACTIVE', 'CANCELED', 'COMPLETED', 'NO_SHOW'));
+            </sql>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

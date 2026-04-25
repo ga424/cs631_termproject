@@ -17,4 +17,7 @@
     <!-- Link customer records to login accounts -->
     <include file="04-create-customer-accounts.xml" relativeToChangelogFile="true"/>
 
+    <!-- Add rental lifecycle audit events -->
+    <include file="05-add-rental-lifecycle-events.xml" relativeToChangelogFile="true"/>
+
 </databaseChangeLog>

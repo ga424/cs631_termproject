@@ -114,7 +114,6 @@ def create_customer_booking(
         reservation=reservation,
         event_type="RESERVED",
         actor=current_user,
-        event_timestamp=reservation.pickup_date_time,
         notes="Reservation created from customer portal.",
     )
     db.commit()

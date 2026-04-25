@@ -317,3 +317,22 @@ def test_database_changelog_contains_customer_account_linkage():
         "chk_customer_account_username",
     ]:
         assert expected in changelog
+
+
+def test_database_changelog_contains_rental_lifecycle_audit():
+    project_root = Path(__file__).resolve().parents[2]
+    changelog_path = project_root / "database/migrations/05-add-rental-lifecycle-events.xml"
+    if not changelog_path.exists():
+        pytest.skip("database migrations directory is not mounted in this test container")
+
+    changelog = changelog_path.read_text()
+
+    for expected in [
+        "rental_lifecycle_event",
+        "FULFILLED",
+        "fk_lifecycle_event_reservation",
+        "chk_lifecycle_event_type",
+        "PICKED_UP",
+        "BILLED",
+    ]:
+        assert expected in changelog

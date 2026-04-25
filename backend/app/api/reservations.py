@@ -55,7 +55,6 @@ def create_reservation(
         reservation=db_reservation,
         event_type="RESERVED",
         actor=current_user,
-        event_timestamp=db_reservation.pickup_date_time,
         notes="Reservation created by staff.",
     )
     db.commit()
