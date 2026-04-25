@@ -51,7 +51,7 @@ async function signInAs(page, role) {
   await page.route("**/api/v1/customer-portal/catalog", async (route) => {
     await route.fulfill({
       contentType: "application/json",
-      body: JSON.stringify({ locations: [], car_classes: [], workflow: [] })
+      body: JSON.stringify({ locations: [], car_classes: [], vehicle_options: [], workflow: [] })
     });
   });
   await page.route("**/api/v1/customer-portal/me", async (route) => {

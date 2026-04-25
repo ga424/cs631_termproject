@@ -336,3 +336,19 @@ def test_database_changelog_contains_rental_lifecycle_audit():
         "BILLED",
     ]:
         assert expected in changelog
+
+
+def test_database_changelog_contains_reservation_return_location():
+    project_root = Path(__file__).resolve().parents[2]
+    changelog_path = project_root / "database/migrations/06-add-reservation-return-location.xml"
+    if not changelog_path.exists():
+        pytest.skip("database migrations directory is not mounted in this test container")
+
+    changelog = changelog_path.read_text()
+
+    for expected in [
+        "return_location_id",
+        "fk_reservation_return_location",
+        "idx_reservation_return_location_id",
+    ]:
+        assert expected in changelog
