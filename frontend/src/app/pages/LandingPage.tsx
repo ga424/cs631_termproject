@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  DemoCustomerSelector,
   MilanBrandHeader,
   PersonaSelector,
   SignInPanel,
@@ -38,6 +37,7 @@ export function LandingPage() {
   const [signupForm, setSignupForm] = useState<CustomerSignupFormState>(DEFAULT_SIGNUP_FORM);
   const [demoCustomers, setDemoCustomers] = useState<CustomerDemoAccount[]>([]);
   const [demoLoading, setDemoLoading] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -84,9 +84,19 @@ export function LandingPage() {
   }
 
   function selectDemoCustomer(customer: CustomerDemoAccount) {
+    if (!customer.is_active) {
+      return;
+    }
     setForm({ username: customer.username, password: DEMO_CUSTOMER_PASSWORD });
     setError("");
     setSuccess(`Loaded ${customer.display_name}'s demo login.`);
+  }
+
+  function selectDemoCustomerByUsername(username: string) {
+    const customer = demoCustomers.find((item) => item.username === username);
+    if (customer) {
+      selectDemoCustomer(customer);
+    }
   }
 
   async function handleLogin(event: React.FormEvent) {
@@ -129,26 +139,36 @@ export function LandingPage() {
         <MilanBrandHeader />
         <div className="milan-login-stack">
           <PersonaSelector selectedRole={form.username} onSelect={selectRole} />
-          <DemoCustomerSelector
-            customers={demoCustomers}
-            loading={demoLoading}
-            selectedUsername={form.username}
-            onSelect={selectDemoCustomer}
-          />
-          <SignInPanel
-            form={form}
-            loading={loading}
-            error={error}
-            success={success}
-            onChange={setForm}
-            onSubmit={handleLogin}
-          />
-          <SignupPanel
-            form={signupForm}
-            loading={loading}
-            onChange={setSignupForm}
-            onSubmit={handleSignup}
-          />
+          {!showRegister ? (
+            <>
+              <SignInPanel
+                form={form}
+                customers={demoCustomers}
+                demoLoading={demoLoading}
+                loading={loading}
+                error={error}
+                success={success}
+                onChange={setForm}
+                onCustomerSelect={selectDemoCustomerByUsername}
+                onSubmit={handleLogin}
+              />
+              <button type="button" className="ghost-button full-width" onClick={() => setShowRegister(true)}>
+                Register New Customer
+              </button>
+            </>
+          ) : (
+            <>
+              <SignupPanel
+                form={signupForm}
+                loading={loading}
+                onChange={setSignupForm}
+                onSubmit={handleSignup}
+              />
+              <button type="button" className="ghost-button full-width" onClick={() => setShowRegister(false)}>
+                Back To Sign In
+              </button>
+            </>
+          )}
           <div className="milan-login-footnote">
             <p>Demo app - select staff or a seeded customer to preload credentials</p>
             <p>"Born from innovation, built to compete"</p>

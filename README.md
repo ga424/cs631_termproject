@@ -112,7 +112,7 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
      - `http://localhost:5173/admin`
 
 6. **Sign in to the frontend**
-   - Customer: select a seeded customer card, or use one of these pre-created DB-backed demo accounts (all use password `customer123`):
+   - Customer: select a seeded customer from the sign-in dropdown, or use one of these active DB-backed demo accounts (all use password `customer123`):
      - `john.doe`
      - `jane.smith`
      - `robert.johnson`
@@ -121,7 +121,7 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
    - Agent: `agent` / `agent123`
    - Manager: `manager` / `manager123`
    - Admin: `admin` / `admin123`
-   - Seeded customer accounts are DB-backed and linked 1:1 to customer records. Staff demo accounts remain environment-backed.
+   - Seeded customer accounts are DB-backed and linked 1:1 to customer records. Inactive no-booking demo accounts are visible in the dropdown for account-state demos but cannot log in. Staff demo accounts remain environment-backed.
    - These are development/demo credentials only. The login response is a JWT bearer token used by the frontend for protected `/api/v1/*` endpoints.
 
 7. **Seed Sample Data** (optional, for testing)

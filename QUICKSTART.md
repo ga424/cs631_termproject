@@ -75,7 +75,7 @@ You can now test the API at http://localhost:8000/docs
 1. Open `http://localhost:5173`
 2. Choose a persona card
 3. Sign in with one of the demo credentials:
-   - Customer: select a seeded customer card, or use `john.doe` / `customer123`
+   - Customer: select an active seeded customer from the sign-in dropdown, or use `john.doe` / `customer123`
    - Agent: `agent` / `agent123`
    - Manager: `manager` / `manager123`
    - Admin: `admin` / `admin123`
@@ -187,7 +187,7 @@ curl http://localhost:8000/api/v1/customer-portal/me \
 - Emily Williams (TX)
 - Michael Brown (AZ)
 
-Seeded customer login usernames are generated as lowercase first/last names, for example `john.doe`, `jane.smith`, and `robert.johnson`. All seeded customer demo accounts use the development-only password `customer123`.
+Seeded customer login usernames are generated as lowercase first/last names, for example `john.doe`, `jane.smith`, and `robert.johnson`. Active seeded customer demo accounts use the development-only password `customer123`. Inactive no-booking accounts are included in demo data and shown as disabled login choices.
 
 ### Sample Reservations & Rental Agreements
 - Various active and completed rentals

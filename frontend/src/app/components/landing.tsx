@@ -104,22 +104,44 @@ export function PersonaSelector({
 
 export function SignInPanel({
   form,
+  customers,
+  demoLoading,
   loading,
   error,
   success,
   onChange,
+  onCustomerSelect,
   onSubmit,
 }: {
   form: LoginFormState;
+  customers: CustomerDemoAccount[];
+  demoLoading: boolean;
   loading: boolean;
   error: string;
   success: string;
   onChange: (form: LoginFormState) => void;
+  onCustomerSelect: (username: string) => void;
   onSubmit: (event: React.FormEvent) => void;
 }) {
   return (
     <form id="sign-in-panel" onSubmit={onSubmit} className="login-form milan-login-card">
       <AlertStrip error={error} success={success} />
+      <label>
+        Seeded customer
+        <select
+          aria-label="Seeded customer"
+          value={customers.some((customer) => customer.username === form.username) ? form.username : ""}
+          onChange={(event) => onCustomerSelect(event.target.value)}
+          disabled={demoLoading}
+        >
+          <option value="">{demoLoading ? "Loading customers..." : "Select customer account"}</option>
+          {customers.map((customer) => (
+            <option key={customer.customer_id} value={customer.username} disabled={!customer.is_active}>
+              {customer.display_name} · {customer.username} · {customer.is_active ? customer.trip_status : "inactive"}
+            </option>
+          ))}
+        </select>
+      </label>
       <label>
         Username
         <input
@@ -148,42 +170,6 @@ export function SignInPanel({
   );
 }
 
-export function DemoCustomerSelector({
-  customers,
-  loading,
-  selectedUsername,
-  onSelect,
-}: {
-  customers: CustomerDemoAccount[];
-  loading: boolean;
-  selectedUsername: string;
-  onSelect: (customer: CustomerDemoAccount) => void;
-}) {
-  return (
-    <section className="demo-customer-panel" aria-label="Demo customer accounts">
-      <div className="demo-panel-head">
-        <p className="eyebrow">Seeded Customers</p>
-        <h2>Preview the portal as a real customer</h2>
-      </div>
-      {loading ? <div className="loading-strip">Loading customer accounts...</div> : null}
-      <div className="demo-customer-grid">
-        {customers.map((customer) => (
-          <button
-            key={customer.customer_id}
-            type="button"
-            className={selectedUsername === customer.username ? "demo-customer-card active" : "demo-customer-card"}
-            onClick={() => onSelect(customer)}
-          >
-            <strong>{customer.display_name}</strong>
-            <span>{customer.username}</span>
-            <small>{customer.trip_status} · {customer.reservation_count} trips</small>
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 export function SignupPanel({
   form,
   loading,
@@ -201,22 +187,45 @@ export function SignupPanel({
         <p className="eyebrow">New Customer</p>
         <h2>Create a customer account</h2>
       </div>
-      <div className="field-grid two-col">
-        <input placeholder="Username" value={form.username} onChange={(e) => onChange({ ...form, username: e.target.value })} required minLength={3} />
-        <input placeholder="Password" type="password" value={form.password} onChange={(e) => onChange({ ...form, password: e.target.value })} required minLength={8} />
-        <input placeholder="First name" value={form.first_name} onChange={(e) => onChange({ ...form, first_name: e.target.value })} required />
-        <input placeholder="Last name" value={form.last_name} onChange={(e) => onChange({ ...form, last_name: e.target.value })} required />
-        <input placeholder="Street" value={form.street} onChange={(e) => onChange({ ...form, street: e.target.value })} required />
-        <input placeholder="City" value={form.city} onChange={(e) => onChange({ ...form, city: e.target.value })} required />
-        <input placeholder="State" value={form.state} onChange={(e) => onChange({ ...form, state: e.target.value.toUpperCase().slice(0, 2) })} required />
-        <input placeholder="ZIP" value={form.zip} onChange={(e) => onChange({ ...form, zip: e.target.value })} required />
-        <input placeholder="License number" value={form.license_number} onChange={(e) => onChange({ ...form, license_number: e.target.value })} required />
-        <input placeholder="License state" value={form.license_state} onChange={(e) => onChange({ ...form, license_state: e.target.value.toUpperCase().slice(0, 2) })} required />
-        <input placeholder="Card type" value={form.credit_card_type} onChange={(e) => onChange({ ...form, credit_card_type: e.target.value })} required />
-        <input placeholder="Card number" value={form.credit_card_number} onChange={(e) => onChange({ ...form, credit_card_number: e.target.value })} required />
-        <input placeholder="Exp month" type="number" min="1" max="12" value={form.exp_month} onChange={(e) => onChange({ ...form, exp_month: e.target.value })} required />
-        <input placeholder="Exp year" type="number" min={new Date().getFullYear()} value={form.exp_year} onChange={(e) => onChange({ ...form, exp_year: e.target.value })} required />
-      </div>
+      <fieldset className="form-fieldset">
+        <legend>Account</legend>
+        <div className="field-grid two-col">
+          <label>Username<input placeholder="Username" value={form.username} onChange={(e) => onChange({ ...form, username: e.target.value })} required minLength={3} /></label>
+          <label>Password<input placeholder="Password" type="password" value={form.password} onChange={(e) => onChange({ ...form, password: e.target.value })} required minLength={8} /></label>
+        </div>
+      </fieldset>
+      <fieldset className="form-fieldset">
+        <legend>Identity</legend>
+        <div className="field-grid two-col">
+          <label>First name<input placeholder="First name" value={form.first_name} onChange={(e) => onChange({ ...form, first_name: e.target.value })} required /></label>
+          <label>Last name<input placeholder="Last name" value={form.last_name} onChange={(e) => onChange({ ...form, last_name: e.target.value })} required /></label>
+        </div>
+      </fieldset>
+      <fieldset className="form-fieldset">
+        <legend>Address</legend>
+        <div className="field-grid two-col">
+          <label>Street<input placeholder="Street" value={form.street} onChange={(e) => onChange({ ...form, street: e.target.value })} required /></label>
+          <label>City<input placeholder="City" value={form.city} onChange={(e) => onChange({ ...form, city: e.target.value })} required /></label>
+          <label>State<input placeholder="State" value={form.state} onChange={(e) => onChange({ ...form, state: e.target.value.toUpperCase().slice(0, 2) })} required /></label>
+          <label>ZIP<input placeholder="ZIP" value={form.zip} onChange={(e) => onChange({ ...form, zip: e.target.value })} required /></label>
+        </div>
+      </fieldset>
+      <fieldset className="form-fieldset">
+        <legend>Driver License</legend>
+        <div className="field-grid two-col">
+          <label>License number<input placeholder="License number" value={form.license_number} onChange={(e) => onChange({ ...form, license_number: e.target.value })} required /></label>
+          <label>License state<input placeholder="License state" value={form.license_state} onChange={(e) => onChange({ ...form, license_state: e.target.value.toUpperCase().slice(0, 2) })} required /></label>
+        </div>
+      </fieldset>
+      <fieldset className="form-fieldset">
+        <legend>Payment</legend>
+        <div className="field-grid two-col">
+          <label>Card type<input placeholder="Card type" value={form.credit_card_type} onChange={(e) => onChange({ ...form, credit_card_type: e.target.value })} required /></label>
+          <label>Card number<input placeholder="Card number" value={form.credit_card_number} onChange={(e) => onChange({ ...form, credit_card_number: e.target.value })} required /></label>
+          <label>Exp month<input placeholder="Exp month" type="number" min="1" max="12" value={form.exp_month} onChange={(e) => onChange({ ...form, exp_month: e.target.value })} required /></label>
+          <label>Exp year<input placeholder="Exp year" type="number" min={new Date().getFullYear()} value={form.exp_year} onChange={(e) => onChange({ ...form, exp_year: e.target.value })} required /></label>
+        </div>
+      </fieldset>
       <button type="submit" disabled={loading}>
         {loading ? "Creating..." : "Create Account"}
       </button>

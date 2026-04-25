@@ -277,6 +277,21 @@ select {
   gap: 14px;
 }
 
+.form-fieldset {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid rgba(221, 213, 200, 0.86);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.form-fieldset legend {
+  padding: 0 6px;
+  font-weight: 800;
+}
+
 .milan-login-footnote {
   display: grid;
   gap: 8px;
@@ -573,7 +588,7 @@ select {
 }
 
 .stat-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
 
 .stat-tile {
@@ -586,7 +601,9 @@ select {
 
 .stat-tile strong {
   display: block;
-  font-size: 1.45rem;
+  font-size: 1.35rem;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
 }
 
 .stat-tile span {
@@ -599,6 +616,77 @@ select {
 .field-grid {
   display: grid;
   gap: 10px;
+}
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  justify-items: end;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.booking-drawer {
+  width: min(100%, 620px);
+  height: 100vh;
+  overflow: auto;
+  padding: 20px;
+  background: var(--surface);
+  box-shadow: -24px 0 42px -34px rgba(15, 23, 42, 0.8);
+}
+
+.inline-actions {
+  justify-content: end;
+  margin-top: 0;
+}
+
+.location-kpi-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.location-kpi-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(221, 213, 200, 0.8);
+  background: var(--surface-soft);
+}
+
+.location-kpi-card strong,
+.location-kpi-card span {
+  display: block;
+}
+
+.location-kpi-card span {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.location-kpi-card dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.location-kpi-card dl div {
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.location-kpi-card dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.location-kpi-card dd {
+  margin: 2px 0 0;
+  font-weight: 900;
 }
 
 .form-section {
@@ -861,10 +949,6 @@ select {
   .mobile-hero {
     grid-template-columns: 1fr auto;
     align-items: center;
-  }
-
-  .stat-grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .queue-grid,

@@ -66,6 +66,11 @@ export function useStaffData() {
 
   const activeReservations = useMemo(() => reservations.filter((item) => item.reservation_status === "ACTIVE"), [reservations]);
   const openRentals = useMemo(() => rentalAgreements.filter((item) => !item.rental_end_date_time), [rentalAgreements]);
+  const rentalReservationSet = useMemo(() => new Set(rentalAgreements.map((item) => item.reservation_id)), [rentalAgreements]);
+  const unassignedActiveReservations = useMemo(
+    () => activeReservations.filter((item) => !rentalReservationSet.has(item.reservation_id)),
+    [activeReservations, rentalReservationSet],
+  );
   const openRentalVinSet = useMemo(() => new Set(openRentals.map((item) => item.vin)), [openRentals]);
   const stats = useMemo(() => {
     if (!dashboard) {
@@ -135,6 +140,7 @@ export function useStaffData() {
     reservationById,
     modelByName,
     activeReservations,
+    unassignedActiveReservations,
     openRentals,
     openRentalVinSet,
     stats,
