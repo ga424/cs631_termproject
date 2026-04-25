@@ -16,6 +16,8 @@ Commands:
     down            Stop all services
     logs            View logs
     logs-api        View API logs
+    debug-api       Start API container with debugpy attach on localhost:5678
+    debug-logs      View API logs using the debug compose override
     logs-frontend   View frontend logs
     logs-db         View database logs
     logs-pgadmin    View pgAdmin logs
@@ -91,6 +93,21 @@ case "${1:-help}" in
         ;;
     logs-api)
         docker-compose logs -f api
+        ;;
+    debug-api)
+        # Starts the normal stack but overrides the API command with debugpy.
+        echo -e "${GREEN}Starting API in remote debug mode...${NC}"
+        docker-compose -f docker-compose.yml -f docker-compose.debug.yml up -d --build api frontend
+        echo ""
+        echo -e "${GREEN}API available at: http://localhost:8000${NC}"
+        echo -e "${GREEN}Frontend available at: http://localhost:5173${NC}"
+        echo -e "${GREEN}Python debugger attach port: localhost:5678${NC}"
+        echo -e "${YELLOW}VS Code: use launch config 'Attach FastAPI Container'.${NC}"
+        echo -e "${YELLOW}Path mapping: local backend/ -> remote /app.${NC}"
+        echo -e "${YELLOW}Set DEBUGPY_WAIT_FOR_CLIENT=1 before running this command if the API should pause until the debugger attaches.${NC}"
+        ;;
+    debug-logs)
+        docker-compose -f docker-compose.yml -f docker-compose.debug.yml logs -f api
         ;;
     logs-frontend)
         docker-compose logs -f frontend

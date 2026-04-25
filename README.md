@@ -291,8 +291,12 @@ curl http://localhost:8000/api/v1
 # View logs
 ./start.sh logs
 ./start.sh logs-api
+./start.sh debug-logs
 ./start.sh logs-db
 ./start.sh logs-frontend
+
+# Start API with Python remote debugger on localhost:5678
+./start.sh debug-api
 
 # Rebuild images
 ./start.sh rebuild
@@ -469,6 +473,39 @@ API_HOST=0.0.0.0
    ```bash
    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
    ```
+
+### Remote Debugging The API Container
+
+Use the debug compose override when you want to attach a debugger to the running FastAPI container while keeping Postgres, Liquibase, and the frontend in Docker:
+
+```bash
+./start.sh debug-api
+```
+
+This keeps the API on `http://localhost:8000`, keeps the frontend on `http://localhost:5173`, and exposes the Python debugger on `localhost:5678`.
+
+VS Code:
+- Open the repository root.
+- Run **Attach FastAPI Container** from `.vscode/launch.json`.
+- Path mapping is `${workspaceFolder}/backend` to `/app`.
+
+PyCharm or another debugger:
+- Attach to host `localhost`, port `5678`.
+- Map local `backend/` to remote `/app`.
+
+By default the API starts immediately. To make the API wait for the debugger before serving requests:
+
+```bash
+DEBUGPY_WAIT_FOR_CLIENT=1 ./start.sh debug-api
+```
+
+View debug API logs with:
+
+```bash
+./start.sh debug-logs
+```
+
+Frontend debugging should use browser DevTools and Vite source maps. The frontend container runs browser-delivered React code, so a Node inspector is not needed for normal UI debugging.
 
 ## React Frontend
 

@@ -26,7 +26,8 @@ wheels/
 MANIFEST
 .pytest_cache/
 .coverage
-.vscode/
+.vscode/*
+!.vscode/launch.json
 .idea/
 *.swp
 *.swo

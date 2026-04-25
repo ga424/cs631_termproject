@@ -1,0 +1,15 @@
+services:
+  api:
+    ports:
+      - "8000:8000"
+      - "5678:5678"
+    environment:
+      DEBUGPY_WAIT_FOR_CLIENT: ${DEBUGPY_WAIT_FOR_CLIENT:-0}
+    command: >
+      sh -c '
+        if [ "$$DEBUGPY_WAIT_FOR_CLIENT" = "1" ]; then
+          python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload;
+        else
+          python -m debugpy --listen 0.0.0.0:5678 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload;
+        fi
+      '

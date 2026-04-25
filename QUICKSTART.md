@@ -92,6 +92,28 @@ You can now test the API at http://localhost:8000/docs
 4. Click **Authorize** and paste only the JWT token value
 5. Open any protected endpoint, click **Try it out**, then **Execute**
 
+## Optional: Attach A Debugger To The API Container
+
+Start the Docker stack with the FastAPI container listening for a Python debugger:
+
+```bash
+./start.sh debug-api
+```
+
+Attach settings:
+- Host: `localhost`
+- Port: `5678`
+- Local path: `backend/`
+- Remote path: `/app`
+
+VS Code users can run the included **Attach FastAPI Container** launch configuration. The API remains available at `http://localhost:8000`, and the frontend remains available at `http://localhost:5173`.
+
+To pause the API until the debugger attaches:
+
+```bash
+DEBUGPY_WAIT_FOR_CLIENT=1 ./start.sh debug-api
+```
+
 ### Option B: Command Line (cURL)
 
 **Log in for a JWT first:**
