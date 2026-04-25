@@ -25,8 +25,8 @@ Commands:
     clean           Remove containers, volumes, and networks
     migrate         Run Liquibase migrations only
     seed            Seed database with sample test data
-    e2e-dashboard   Backward-compatible alias for the mobile UI E2E test
-    e2e-ui          Seed DB and run frontend mobile UI E2E test
+    e2e-dashboard   Backward-compatible alias for the mobile UI E2E smoke test
+    e2e-ui          Seed DB and run frontend mobile UI E2E smoke test
     frontend-build  Run a local production build of the routed frontend
     scan            Run Trivy security scan
     test            Run backend tests with coverage
@@ -138,7 +138,7 @@ case "${1:-help}" in
         echo -e "${GREEN}Seeding database with sample data...${NC}"
         docker-compose exec -T api python seed_data.py
         echo -e "${GREEN}Running mobile UI E2E test...${NC}"
-        (cd frontend && npm install && npx playwright install chromium && npm run test:e2e)
+        (cd frontend && npm ci && npm run test:e2e:install && npm run test:e2e)
         ;;
     frontend-build)
         # Builds the routed frontend locally to catch integration regressions quickly.

@@ -5,6 +5,9 @@
 1. **Ensure Docker Desktop is Running**
    - On macOS: Open `Docker.app` from Applications
    - You should see the Docker icon in your menu bar
+2. **Use supported local runtimes when running checks outside Docker**
+   - Python 3.11 for backend tests
+   - Node.js 20+ for frontend build and Playwright E2E
 
 ## Step 1: Start All Services
 
@@ -76,6 +79,7 @@ You can now test the API at http://localhost:8000/docs
    - Agent: `agent` / `agent123`
    - Manager: `manager` / `manager123`
    - Admin: `admin` / `admin123`
+   - These credentials are for local development/demo use only.
 4. Verify you are routed into the matching persona workspace
 
 ## Step 3B: Test the API
@@ -264,6 +268,21 @@ lsof -i :8000
 # Or use a different port (edit docker-compose.yml)
 ```
 
+### Playwright or frontend checks fail
+
+Playwright and Vite require a supported Node runtime. Use Node.js 20+:
+```bash
+node --version
+cd frontend
+npm ci
+npm run build
+npm run test:e2e:install
+npm run test:e2e
+```
+
+The Playwright config starts the Vite server automatically on `http://127.0.0.1:5173`.
+The committed Playwright suite mocks the API responses needed for persona routing. Use `./start.sh up` and `./start.sh seed` when manually testing against live backend data.
+
 ## Common Test Workflows
 
 ### 1. Create a New Rental
@@ -288,7 +307,9 @@ lsof -i :8000
 - Explore the Swagger documentation: http://localhost:8000/docs
 - Sign in through the mobile-first frontend at `http://localhost:5173`
 - Test customer, agent, manager, and admin personas
+- Run backend tests without touching generated coverage output: `cd backend && python3 -m pytest --no-cov`
 - Run the routed frontend smoke test with `cd frontend && npm run build`
+- Run persona E2E with `cd frontend && npm run test:e2e`
 - Review workflow mapping in `docs/BPMN_WORKFLOWS.md`
 
 ---

@@ -67,6 +67,8 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
 ### Prerequisites
 - Docker & Docker Compose (version 20.10+)
 - macOS/Linux/Windows with Docker Desktop
+- Python 3.11 for local backend tests outside Docker
+- Node.js 20+ for local frontend builds and Playwright E2E tests
 
 ### Setup & Run
 
@@ -114,7 +116,7 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
    - Agent: `agent` / `agent123`
    - Manager: `manager` / `manager123`
    - Admin: `admin` / `admin123`
-   - The login response is a JWT bearer token used by the frontend for protected `/api/v1/*` endpoints.
+   - These are development/demo credentials only. The login response is a JWT bearer token used by the frontend for protected `/api/v1/*` endpoints.
 
 7. **Seed Sample Data** (optional, for testing)
    ```bash
@@ -300,6 +302,9 @@ curl http://localhost:8000/api/v1
 # Build the frontend locally
 cd frontend && npm run build
 
+# Run local backend tests without writing coverage.xml
+cd backend && python3 -m pytest --no-cov
+
 # Run Trivy security scan
 ./start.sh scan
 
@@ -338,8 +343,11 @@ GitHub Actions workflow file: `.github/workflows/ci-cd.yml`
 ### CI (on pull requests and pushes to `main`)
 - Install backend dependencies
 - Run `pytest` with coverage
-- Enforce minimum coverage threshold (`85%` for `app.main`)
+- Enforce minimum coverage threshold (`100%` for `app.main`)
 - Upload `coverage.xml` as a workflow artifact
+- Install frontend dependencies with Node 20
+- Run the Vite production build
+- Install Chromium and run Playwright persona-route E2E tests
 - Build API and Liquibase Docker images
 
 ### CD (on pushes to `main`)
@@ -352,15 +360,28 @@ GitHub Actions workflow file: `.github/workflows/ci-cd.yml`
 ./start.sh test
 ```
 
-Or directly:
+Or directly with the same coverage gate:
 ```bash
 docker-compose run --rm api pytest
 ```
 
-Frontend smoke check:
+For a fast local backend behavior check that does not rewrite tracked coverage output:
 ```bash
-cd frontend && npm run build
+cd backend
+python3 -m pytest --no-cov
 ```
+
+Frontend checks:
+```bash
+cd frontend
+npm ci
+npm run build
+npm run test:e2e:install
+npm run test:e2e
+```
+
+The Playwright config starts the Vite dev server automatically. Keep the backend/API available when exercising screens that load live API data.
+The committed Playwright suite is a persona-routing smoke test and mocks the API responses it needs; use the Docker demo path to test against live seeded backend data.
 
 ## Database
 
@@ -449,6 +470,18 @@ Notes:
 - Keep the backend running at `http://localhost:8000`.
 - The Vite dev server proxies `/api` and `/health` to the backend.
 - If you need a custom API host, set `VITE_API_BASE_URL`.
+- Use Node.js 20+ locally; this matches the frontend Docker image and CI.
+
+## Generated Artifacts
+
+These files/directories are generated during local verification and should not be committed:
+- `backend/coverage.xml`
+- `backend/.coverage`
+- `backend/.pytest_cache/`
+- Python `__pycache__/` folders
+- `frontend/dist/`
+- `frontend/test-results/`
+- `frontend/node_modules/`
 
 ## Architecture And Journey Diagrams
 
@@ -495,6 +528,17 @@ docker-compose up liquibase
 # View migration logs
 docker-compose logs liquibase
 ```
+
+### Playwright or frontend build fails locally
+```bash
+node --version
+cd frontend
+npm ci
+npm run test:e2e:install
+npm run build
+```
+
+Use Node.js 20 or newer. Node 19 is not supported by the current Vite/Playwright toolchain.
 
 ## Next Steps
 
