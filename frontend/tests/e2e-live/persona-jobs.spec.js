@@ -21,7 +21,7 @@ async function fillCustomerFields(page, prefix) {
   await page.getByPlaceholder("Last name").fill("Tester");
   await page.getByPlaceholder("Street").fill("42 Workflow Way");
   await page.getByPlaceholder("City").fill("Newark");
-  await page.getByPlaceholder("State").fill("NJ");
+  await page.getByPlaceholder("State", { exact: true }).fill("NJ");
   await page.getByPlaceholder("ZIP").fill("07102");
   await page.getByPlaceholder("License number").fill(`NJ${stamp}${prefix.slice(0, 2).toUpperCase()}`);
   await page.getByPlaceholder("License state").fill("NJ");
@@ -29,9 +29,23 @@ async function fillCustomerFields(page, prefix) {
   await page.getByPlaceholder("Card number").fill("4111111111111111");
 }
 
-test("customer can book and track a reservation", async ({ page }) => {
-  await signInAs(page, "customer");
+async function signUpCustomer(page) {
+  const username = `live.customer.${stamp}`;
+  const password = "customer123";
 
+  await page.goto("/");
+  await page.getByPlaceholder("Username").fill(username);
+  await page.getByPlaceholder("Password").fill(password);
+  await fillCustomerFields(page, "Customer");
+  await page.getByPlaceholder("Exp month").fill("12");
+  await page.getByPlaceholder("Exp year").fill(`${new Date().getFullYear() + 2}`);
+  await page.getByRole("button", { name: /create account/i }).click();
+}
+
+test("customer can book and track a reservation", async ({ page }) => {
+  await signUpCustomer(page);
+
+  await expect(page).toHaveURL(/\/customer$/);
   await expect(page.getByRole("heading", { name: /customer portal/i })).toBeVisible();
   await fillCustomerFields(page, "Customer");
   await page.getByRole("combobox").nth(0).selectOption({ index: 1 });
@@ -42,7 +56,7 @@ test("customer can book and track a reservation", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/customer$/);
   await expect(page.getByText(/reservation booked/i)).toBeVisible();
-  await expect(page.getByText(/trip status/i)).toBeVisible();
+  await expect(page.getByRole("heading", { name: /trip status/i })).toBeVisible();
   await expect(page.getByText(/ACTIVE/i)).toBeVisible();
 });
 
@@ -70,6 +84,7 @@ test("agent can intake, start pickup, and close a rental", async ({ page }) => {
   await expect(page.getByText(/pickup complete and rental started/i)).toBeVisible();
 
   await page.getByRole("button", { name: /^return$/i }).click();
+  await page.getByRole("combobox").nth(0).selectOption({ index: 1 });
   await page.getByLabel("Rental end").fill(futureLocalDateTime(16));
   await page.getByPlaceholder("End odometer").fill("16125");
   await page.getByPlaceholder("Actual cost override").fill("175");
@@ -81,10 +96,10 @@ test("manager can review KPIs and workflow exceptions", async ({ page }) => {
   await signInAs(page, "manager");
 
   await expect(page.getByRole("heading", { name: /manager dashboard/i })).toBeVisible();
-  await expect(page.getByText("Fleet")).toBeVisible();
   await expect(page.getByText(/branch visibility/i)).toBeVisible();
+  await expect(page.getByText(/class rates/i)).toBeVisible();
   await page.getByRole("button", { name: /^exceptions$/i }).click();
-  await expect(page.getByText(/workflow exceptions/i)).toBeVisible();
+  await expect(page.getByRole("heading", { name: /workflow exceptions/i })).toBeVisible();
   await page.getByRole("button", { name: /^workflow$/i }).click();
   await expect(page.getByText(/bpmn workflow lens/i)).toBeVisible();
 });

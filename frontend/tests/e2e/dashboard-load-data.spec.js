@@ -80,6 +80,18 @@ async function signInAs(page, role) {
     });
   });
   await page.route("**/api/v1/**", async (route) => {
+    const url = route.request().url();
+    if (
+      url.includes("/api/v1/auth/login") ||
+      url.includes("/api/v1/dashboard/overview") ||
+      url.includes("/api/v1/customer-portal/catalog") ||
+      url.includes("/api/v1/customer-portal/me") ||
+      url.includes("/api/v1/auth/demo-customers")
+    ) {
+      await route.fallback();
+      return;
+    }
+
     await route.fulfill({ contentType: "application/json", body: JSON.stringify([]) });
   });
 
