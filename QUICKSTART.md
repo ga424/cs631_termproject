@@ -29,6 +29,12 @@ API Docs at: http://localhost:8000/docs
 
 Wait for approximately 10-15 seconds for all services to be ready.
 
+The frontend is available at `http://localhost:5173` and will route users into:
+- `/customer`
+- `/agent`
+- `/manager`
+- `/admin`
+
 ## Step 2: Populate with Sample Data
 
 ```bash
@@ -60,6 +66,19 @@ You can now test the API at http://localhost:8000/docs
 ```
 
 ## Step 3: Test the API
+
+## Step 3A: Test the Routed Frontend
+
+1. Open `http://localhost:5173`
+2. Choose a persona card
+3. Sign in with one of the demo credentials:
+   - Customer: `customer` / `customer123`
+   - Agent: `agent` / `agent123`
+   - Manager: `manager` / `manager123`
+   - Admin: `admin` / `admin123`
+4. Verify you are routed into the matching persona workspace
+
+## Step 3B: Test the API
 
 ### Option A: Interactive Swagger UI (Recommended)
 1. Open browser: **http://localhost:8000/docs**
@@ -269,6 +288,7 @@ lsof -i :8000
 - Explore the Swagger documentation: http://localhost:8000/docs
 - Sign in through the mobile-first frontend at `http://localhost:5173`
 - Test customer, agent, manager, and admin personas
+- Run the routed frontend smoke test with `cd frontend && npm run build`
 - Review workflow mapping in `docs/BPMN_WORKFLOWS.md`
 
 ---

@@ -12,6 +12,7 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
 - **Database Migrations**: Liquibase
 - **Containerization**: Docker & Docker Compose
 - **ORM**: SQLAlchemy
+- **Frontend**: React + Vite with a routed mobile-first TypeScript UI
 
 ### Project Structure
 ```
@@ -48,8 +49,12 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
 │   │   └── 02-create-tables.xml     # Table definitions
 │   └── liquibase/                   # Liquibase configuration
 ├── frontend/                        # React + Vite frontend
-│   ├── src/                         # Frontend source code
+│   ├── src/
+│   │   ├── app/                     # Routed persona pages, shared shell, hooks, API client
+│   │   ├── main.tsx                 # Frontend entrypoint
+│   │   └── styles.css               # Shared mobile-first theme and layout styles
 │   ├── package.json                 # Frontend dependencies/scripts
+│   ├── tsconfig.json                # Frontend TypeScript config
 │   └── vite.config.js               # Dev server and proxy config
 ├── docker-compose.yml               # Multi-container orchestration
 ├── Dockerfile.liquibase             # Liquibase container definition
@@ -98,6 +103,11 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
    - ReDoc: `http://localhost:8000/redoc`
    - Health Check: `http://localhost:8000/health`
    - Frontend Mobile UI: `http://localhost:5173`
+   - Persona routes after login:
+     - `http://localhost:5173/customer`
+     - `http://localhost:5173/agent`
+     - `http://localhost:5173/manager`
+     - `http://localhost:5173/admin`
 
 6. **Sign in to the frontend**
    - Customer: `customer` / `customer123`
@@ -287,6 +297,9 @@ curl http://localhost:8000/api/v1
 # Run end-to-end mobile UI test
 ./start.sh e2e-ui
 
+# Build the frontend locally
+cd frontend && npm run build
+
 # Run Trivy security scan
 ./start.sh scan
 
@@ -342,6 +355,11 @@ GitHub Actions workflow file: `.github/workflows/ci-cd.yml`
 Or directly:
 ```bash
 docker-compose run --rm api pytest
+```
+
+Frontend smoke check:
+```bash
+cd frontend && npm run build
 ```
 
 ## Database
