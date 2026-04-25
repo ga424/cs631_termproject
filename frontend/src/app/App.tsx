@@ -1,7 +1,7 @@
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { usePathname } from "./lib/router";
-import { LoginPage } from "./pages/LoginPage";
+import { LandingPage } from "./pages/LandingPage";
 import { CustomerPortal } from "./pages/customer/CustomerPortal";
 import { AgentWorkspace } from "./pages/agent/AgentWorkspace";
 import { ManagerDashboard } from "./pages/manager/ManagerDashboard";
@@ -12,11 +12,11 @@ function RoutedApp() {
   const { session } = useAuth();
 
   if (pathname === "/") {
-    return <LoginPage />;
+    return <LandingPage />;
   }
 
   if (!session) {
-    return <LoginPage />;
+    return <LandingPage />;
   }
 
   if (pathname === "/customer") {
@@ -51,7 +51,7 @@ function RoutedApp() {
     );
   }
 
-  return <LoginPage />;
+  return <LandingPage />;
 }
 
 export default function App() {
