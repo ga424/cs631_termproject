@@ -143,3 +143,5 @@ export function useStaffData() {
     perform,
   };
 }
+
+export type StaffData = ReturnType<typeof useStaffData>;
