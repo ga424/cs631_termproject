@@ -13,11 +13,38 @@ from uuid import uuid4
 sys.path.insert(0, '/app')
 
 from app.core.config import settings
+from app.core.security import hash_password, normalize_username
 from app.db.base import Base
 from app.models.models import (
-    Location, Customer, CarClass, Model, Car, 
+    Location, Customer, CustomerAccount, CarClass, Model, Car, 
     Reservation, RentalAgreement
 )
+
+DEMO_CUSTOMER_PASSWORD = "customer123"
+
+
+def ensure_customer_accounts(session, customers):
+    """Create demo login accounts for seeded customers that do not already have one."""
+    print("  - Ensuring customer demo accounts...")
+    for customer in customers:
+        existing = session.query(CustomerAccount).filter(CustomerAccount.customer_id == customer.customer_id).first()
+        if existing:
+            continue
+
+        base_username = normalize_username(f"{customer.first_name}.{customer.last_name}")
+        username = base_username
+        suffix = 2
+        while session.query(CustomerAccount).filter(CustomerAccount.username == username).first():
+            username = f"{base_username}{suffix}"
+            suffix += 1
+
+        session.add(CustomerAccount(
+            customer_id=customer.customer_id,
+            username=username,
+            password_hash=hash_password(DEMO_CUSTOMER_PASSWORD),
+            is_active=True,
+        ))
+    session.commit()
 
 
 def create_engine_and_session():
@@ -36,6 +63,8 @@ def seed_database():
         # Check if data already exists to avoid duplicates
         existing_locations = session.query(Location).count()
         if existing_locations > 0:
+            customers = session.query(Customer).all()
+            ensure_customer_accounts(session, customers)
             print("Sample data already exists in database. Skipping seed.")
             return
         
@@ -157,6 +186,7 @@ def seed_database():
         ]
         session.add_all(customers)
         session.commit()
+        ensure_customer_accounts(session, customers)
         
         # Create Reservations
         print("  - Adding reservations...")

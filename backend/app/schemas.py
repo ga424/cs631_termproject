@@ -16,6 +16,18 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     username: str
     role: str
+    customer_id: Optional[UUID] = None
+    account_id: Optional[UUID] = None
+
+
+class CustomerDemoAccount(BaseModel):
+    customer_id: UUID
+    username: str
+    display_name: str
+    home_branch: Optional[str] = None
+    trip_status: str
+    reservation_count: int
+    active_rental_count: int
 
 
 # Location schemas
@@ -64,6 +76,11 @@ class CustomerBase(BaseModel):
 
 class CustomerCreate(CustomerBase):
     pass
+
+
+class CustomerSignupRequest(CustomerBase):
+    username: str = Field(min_length=3, max_length=80)
+    password: str = Field(min_length=8, max_length=128)
 
 
 class CustomerUpdate(BaseModel):
