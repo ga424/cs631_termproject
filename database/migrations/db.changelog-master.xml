@@ -14,4 +14,7 @@
     <!-- Add business rule constraints -->
     <include file="03-add-business-constraints.xml" relativeToChangelogFile="true"/>
 
+    <!-- Link customer records to login accounts -->
+    <include file="04-create-customer-accounts.xml" relativeToChangelogFile="true"/>
+
 </databaseChangeLog>
