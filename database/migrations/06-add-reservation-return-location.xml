@@ -1,0 +1,36 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="06-add-reservation-return-location" author="cs631-team">
+        <comment>Track requested return branch separately from pickup branch</comment>
+
+        <addColumn tableName="reservation">
+            <column name="return_location_id" type="UUID"/>
+        </addColumn>
+
+        <sql>
+            UPDATE reservation
+            SET return_location_id = location_id
+            WHERE return_location_id IS NULL;
+        </sql>
+
+        <addForeignKeyConstraint
+            baseTableName="reservation"
+            baseColumnNames="return_location_id"
+            constraintName="fk_reservation_return_location"
+            referencedTableName="location"
+            referencedColumnNames="location_id"/>
+
+        <createIndex indexName="idx_reservation_return_location_id" tableName="reservation">
+            <column name="return_location_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropColumn tableName="reservation" columnName="return_location_id"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

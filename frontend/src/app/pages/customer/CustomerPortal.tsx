@@ -59,12 +59,15 @@ export function CustomerPortal() {
         ...form,
         exp_month: Number(form.exp_month),
         exp_year: Number(form.exp_year),
+        return_location_id: form.return_to_different_location ? form.return_location_id : form.location_id,
         pickup_date_time: new Date(form.pickup_date_time).toISOString(),
         return_date_time_requested: new Date(form.return_date_time_requested).toISOString(),
       });
       setForm((current) => ({
         ...current,
         location_id: "",
+        return_location_id: "",
+        return_to_different_location: false,
         class_id: "",
         pickup_date_time: "",
         return_date_time_requested: "",

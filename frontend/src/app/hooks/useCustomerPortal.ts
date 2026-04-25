@@ -5,6 +5,7 @@ import type { CustomerPortalBookingRequest, CustomerPortalCatalog, CustomerPorta
 const EMPTY_CATALOG: CustomerPortalCatalog = {
   locations: [],
   car_classes: [],
+  vehicle_options: [],
   workflow: [],
 };
 

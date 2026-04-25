@@ -20,4 +20,7 @@
     <!-- Add rental lifecycle audit events -->
     <include file="05-add-rental-lifecycle-events.xml" relativeToChangelogFile="true"/>
 
+    <!-- Track requested return branch separately from pickup branch -->
+    <include file="06-add-reservation-return-location.xml" relativeToChangelogFile="true"/>
+
 </databaseChangeLog>

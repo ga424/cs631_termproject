@@ -15,6 +15,8 @@ export const CUSTOMER_BOOKING_DEFAULT_FORM = {
   exp_month: `${12}`,
   exp_year: `${new Date().getFullYear() + 2}`,
   location_id: "",
+  return_location_id: "",
+  return_to_different_location: false,
   class_id: "",
   pickup_date_time: "",
   return_date_time_requested: "",
@@ -47,7 +49,7 @@ export function BookTab({
           <div className="section-kicker">2</div>
           <div>
             <strong>Select trip</strong>
-            <span>Choose branch, vehicle class, pickup, and return window.</span>
+            <span>Choose pickup branch, pickup time, return branch, return time, and vehicle class.</span>
           </div>
         </li>
         <li>
@@ -81,28 +83,80 @@ export function BookTab({
         </div>
       </fieldset>
       <fieldset className="form-fieldset">
-        <legend>Reservation</legend>
+        <legend>Trip Details</legend>
         <div className="field-grid">
           <select value={form.location_id} onChange={(e) => onChange({ ...form, location_id: e.target.value })} required>
-            <option value="">Pickup branch</option>
+            <option value="">Pick-up location</option>
             {catalog.locations.map((item) => (
               <option key={item.location_id} value={item.location_id}>{item.city}, {item.state}</option>
             ))}
           </select>
-          <select value={form.class_id} onChange={(e) => onChange({ ...form, class_id: e.target.value })} required>
-            <option value="">Vehicle class</option>
-            {catalog.car_classes.map((item) => (
-              <option key={item.class_id} value={item.class_id}>{item.class_name} · {formatCurrency(item.daily_rate)}/day</option>
-            ))}
-          </select>
+          <label className="stack-label checkbox-line">
+            <input
+              type="checkbox"
+              checked={form.return_to_different_location}
+              onChange={(e) => onChange({
+                ...form,
+                return_to_different_location: e.target.checked,
+                return_location_id: e.target.checked ? form.return_location_id : "",
+              })}
+            />
+            Return to a different location
+          </label>
+          {form.return_to_different_location ? (
+            <select value={form.return_location_id} onChange={(e) => onChange({ ...form, return_location_id: e.target.value })} required>
+              <option value="">Drop-off location</option>
+              {catalog.locations.map((item) => (
+                <option key={item.location_id} value={item.location_id}>{item.city}, {item.state}</option>
+              ))}
+            </select>
+          ) : null}
           <label className="stack-label">
             Pickup
             <input type="datetime-local" value={form.pickup_date_time} onChange={(e) => onChange({ ...form, pickup_date_time: e.target.value })} required />
           </label>
           <label className="stack-label">
-            Return
+            Drop-off
             <input type="datetime-local" value={form.return_date_time_requested} onChange={(e) => onChange({ ...form, return_date_time_requested: e.target.value })} required />
           </label>
+        </div>
+      </fieldset>
+      <fieldset className="form-fieldset">
+        <legend>Choose Vehicle Class</legend>
+        <div className="vehicle-option-grid">
+          {(catalog.vehicle_options.length ? catalog.vehicle_options : catalog.car_classes.map((item) => ({
+            class_id: item.class_id,
+            class_name: item.class_name,
+            similar_model: `${item.class_name} or Similar`,
+            seats: 5,
+            doors: 4,
+            bags: 1,
+            daily_rate: item.daily_rate,
+            weekly_rate: item.weekly_rate,
+            rate_badge: "Standard Rate",
+            upgrade_badge: null,
+          }))).map((option) => (
+            <label key={option.class_id} className={`vehicle-option-card ${form.class_id === option.class_id ? "selected" : ""}`}>
+              <input
+                type="radio"
+                name="class_id"
+                value={option.class_id}
+                checked={form.class_id === option.class_id}
+                onChange={(e) => onChange({ ...form, class_id: e.target.value })}
+                required
+              />
+              <span className="vehicle-card-main">
+                <strong>{option.class_name}</strong>
+                <small>{option.similar_model}</small>
+                <em>{option.seats} seats · {option.doors} doors · {option.bags} bags</em>
+              </span>
+              <span className="vehicle-card-rate">
+                <small>{option.upgrade_badge || "Coupon does not apply"}</small>
+                <strong>{formatCurrency(option.daily_rate)}/day</strong>
+                <em>{option.rate_badge}</em>
+              </span>
+            </label>
+          ))}
         </div>
       </fieldset>
       <button type="submit">Reserve My Car</button>

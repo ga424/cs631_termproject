@@ -1,5 +1,5 @@
 import { formatCurrency, formatDateTime } from "../../lib/api";
-import { QueueList, WorkflowTracker } from "../../components/ui";
+import { WorkflowTracker } from "../../components/ui";
 import type { CarClass, CustomerPortalSummary, Location, RentalAgreement, Reservation } from "../../lib/types";
 import { rentalStepIndex, reservationStepIndex } from "../../lib/workflows";
 
@@ -17,6 +17,7 @@ function ReservationDrilldown({
   classById: Record<string, CarClass>;
 }) {
   const branch = locationById[reservation.location_id];
+  const returnBranch = locationById[reservation.return_location_id || reservation.location_id];
   const carClass = classById[reservation.class_id];
   const activeIndex = activeRental
     ? rentalStepIndex(Boolean(activeRental.rental_end_date_time))
@@ -42,11 +43,21 @@ function ReservationDrilldown({
       <summary>
         <span>
           <strong>{carClass?.class_name || "Reserved vehicle"} · {tripStatus}</strong>
-          <small>{formatDateTime(reservation.pickup_date_time)} to {formatDateTime(reservation.return_date_time_requested)}</small>
+          <small>Pick up {formatDateTime(reservation.pickup_date_time)} · Drop off {formatDateTime(reservation.return_date_time_requested)}</small>
         </span>
-        <em>{branch ? `${branch.city}, ${branch.state}` : "Branch"}</em>
+        <em>{branch ? `${branch.city}, ${branch.state}` : "Pick-up branch"}</em>
       </summary>
       <div className="reservation-detail-grid">
+        <div className="identity-card">
+          <strong>Pick-up</strong>
+          <span>{branch ? `${branch.city}, ${branch.state}` : "Branch pending"}</span>
+          <p>{formatDateTime(reservation.pickup_date_time)}</p>
+        </div>
+        <div className="identity-card">
+          <strong>Drop-off</strong>
+          <span>{returnBranch ? `${returnBranch.city}, ${returnBranch.state}` : "Branch pending"}</span>
+          <p>{formatDateTime(reservation.return_date_time_requested)}</p>
+        </div>
         <div className="identity-card">
           <strong>Trip status</strong>
           <span>{tripStatus}</span>
@@ -74,7 +85,16 @@ function ReservationDrilldown({
           {events.map((event) => (
             <li key={event.event_id}>
               <strong>{event.event_type.replace("_", " ")}</strong>
-              <span>{formatDateTime(event.event_timestamp)} · {event.actor_role} {event.actor_username}</span>
+              <dl className="audit-meta">
+                <div>
+                  <dt>Who</dt>
+                  <dd>{event.actor_role} · {event.actor_username}</dd>
+                </div>
+                <div>
+                  <dt>When</dt>
+                  <dd>{formatDateTime(event.event_timestamp)}</dd>
+                </div>
+              </dl>
               {event.notes ? <p>{event.notes}</p> : null}
             </li>
           ))}
@@ -100,6 +120,11 @@ export function MyTripTab({
 }) {
   const activeRental = summary?.active_rentals[0];
   const reservation = summary?.reservations[0];
+  const currentTrips = summary?.reservations.filter((item) => {
+    const rental = summary.rental_agreements.find((agreement) => agreement.reservation_id === item.reservation_id);
+    return item.reservation_status === "ACTIVE" || Boolean(rental && !rental.rental_end_date_time);
+  }) || [];
+  const historicalTrips = summary?.reservations.filter((item) => !currentTrips.some((trip) => trip.reservation_id === item.reservation_id)) || [];
   const nextAction = activeRental
     ? "Return vehicle by the requested return time and complete billing with an agent."
     : reservation
@@ -111,7 +136,7 @@ export function MyTripTab({
       <div className="surface-head">
         <div>
           <p className="eyebrow">Trip Status</p>
-          <h2>My Reservation And Rental</h2>
+          <h2>My Trips</h2>
           <p>{nextAction}</p>
         </div>
         <div className="action-strip inline-actions">
@@ -127,10 +152,10 @@ export function MyTripTab({
             <p>{nextAction}</p>
           </div>
           <div className="queue-card reservation-board">
-            <h3>Reservations</h3>
-            {summary.reservations.length ? (
+            <h3>Current Trip</h3>
+            {currentTrips.length ? (
               <div className="reservation-stack">
-                {summary.reservations.map((item) => {
+                {currentTrips.map((item) => {
                   const rentalForReservation = summary.rental_agreements.find((rental) => rental.reservation_id === item.reservation_id);
                   return (
                     <ReservationDrilldown
@@ -145,19 +170,31 @@ export function MyTripTab({
                 })}
               </div>
             ) : (
-              <div className="empty-block">No reservations created yet.</div>
+              <div className="empty-block">No current reservation or active rental.</div>
             )}
           </div>
-          <QueueList
-            title="Active rentals"
-            items={summary.active_rentals.map((item) => ({
-              id: item.contract_no,
-              title: `Contract ${item.contract_no.slice(0, 8)}`,
-              subtitle: `${item.vin} · started ${formatDateTime(item.rental_start_date_time)}`,
-              meta: item.rental_end_date_time ? "Closed" : "In progress",
-            }))}
-            emptyText="No active rental at the moment."
-          />
+          <div className="queue-card reservation-board">
+            <h3>Historical Trips</h3>
+            {historicalTrips.length ? (
+              <div className="reservation-stack">
+                {historicalTrips.map((item) => {
+                  const rentalForReservation = summary.rental_agreements.find((rental) => rental.reservation_id === item.reservation_id);
+                  return (
+                    <ReservationDrilldown
+                      key={item.reservation_id}
+                      reservation={item}
+                      activeRental={rentalForReservation}
+                      summary={summary}
+                      locationById={locationById}
+                      classById={classById}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="empty-block">No completed, canceled, or no-show trips yet.</div>
+            )}
+          </div>
         </div>
       ) : (
         <div className="empty-block">

@@ -618,6 +618,19 @@ select {
   gap: 10px;
 }
 
+.checkbox-line {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.checkbox-line input {
+  width: auto;
+}
+
 .drawer-backdrop {
   position: fixed;
   inset: 0;
@@ -668,6 +681,46 @@ select {
   margin-top: 4px;
   color: var(--muted);
   font-size: 0.86rem;
+}
+
+.vehicle-option-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.vehicle-option-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(221, 213, 200, 0.86);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.vehicle-option-card.selected {
+  border-color: var(--accent);
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+
+.vehicle-card-main,
+.vehicle-card-rate {
+  display: grid;
+  gap: 3px;
+}
+
+.vehicle-card-main small,
+.vehicle-card-main em,
+.vehicle-card-rate small,
+.vehicle-card-rate em {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-style: normal;
+}
+
+.vehicle-card-rate {
+  text-align: right;
 }
 
 .inline-actions {
@@ -890,16 +943,39 @@ select {
   padding: 0 0 0 12px;
 }
 
-.audit-timeline strong,
-.audit-timeline span {
+.audit-timeline strong {
   display: block;
 }
 
-.audit-timeline span,
 .audit-timeline p {
   color: var(--muted);
   font-size: 0.84rem;
   margin: 2px 0 0;
+}
+
+.audit-meta {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin: 6px 0 0;
+}
+
+.audit-meta div,
+.audit-meta dt,
+.audit-meta dd {
+  margin: 0;
+}
+
+.audit-meta dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.audit-meta dd {
+  color: var(--ink);
+  font-size: 0.86rem;
 }
 
 .reservation-drilldown .tracker-card {
