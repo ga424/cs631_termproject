@@ -47,10 +47,16 @@ export function AgentWorkspace() {
   }, [rentalForm.reservation_id, staff.unassignedActiveReservations]);
 
   useEffect(() => {
-    if (rentalForm.reservation_id && !rentalForm.vin && assignableCars[0]) {
+    if (rentalForm.reservation_id && (!rentalForm.vin || !assignableCars.some((car) => car.vin === rentalForm.vin)) && assignableCars[0]) {
       setRentalForm((current) => ({ ...current, vin: assignableCars[0].vin }));
     }
   }, [assignableCars, rentalForm.reservation_id, rentalForm.vin]);
+
+  useEffect(() => {
+    if (!returnForm.contract_no && staff.openRentals[0]) {
+      setReturnForm((current) => ({ ...current, contract_no: staff.openRentals[0].contract_no }));
+    }
+  }, [returnForm.contract_no, staff.openRentals]);
 
   async function createCustomer(event: React.FormEvent) {
     event.preventDefault();
@@ -86,7 +92,6 @@ export function AgentWorkspace() {
         reservation_id: rentalForm.reservation_id,
         vin: rentalForm.vin,
         rental_start_date_time: new Date(rentalForm.rental_start_date_time).toISOString(),
-        start_odometer_reading: Number(rentalForm.start_odometer_reading),
       });
       setReturnForm((current) => ({ ...current, contract_no: created.contract_no }));
       setRentalForm(DEFAULT_RENTAL_FORM);

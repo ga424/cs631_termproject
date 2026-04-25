@@ -6,7 +6,6 @@ export const DEFAULT_RENTAL_FORM = {
   reservation_id: "",
   vin: "",
   rental_start_date_time: "",
-  start_odometer_reading: "",
 };
 
 export type AgentRentalForm = typeof DEFAULT_RENTAL_FORM;
@@ -24,6 +23,8 @@ export function PickupTab({
   assignableCars: Car[];
   createRental: (event: React.FormEvent) => void;
 }) {
+  const selectedCar = assignableCars.find((car) => car.vin === rentalForm.vin);
+
   return (
     <SectionCard title="Pickup Assignment" subtitle="Assign a compatible VIN and start the rental contract.">
       <form className="stack-form" onSubmit={createRental}>
@@ -44,11 +45,17 @@ export function PickupTab({
         {rentalForm.reservation_id && assignableCars.length === 0 ? (
           <div className="empty-block">No available car matches this reservation branch and class.</div>
         ) : null}
+        {selectedCar ? (
+          <div className="identity-card">
+            <strong>Pickup odometer</strong>
+            <span>{selectedCar.current_odometer_reading.toLocaleString()} miles</span>
+            <p>This is pulled from the selected vehicle record. The new odometer reading is captured when the vehicle is returned.</p>
+          </div>
+        ) : null}
         <label className="stack-label">
           Rental start
           <input type="datetime-local" value={rentalForm.rental_start_date_time} onChange={(e) => setRentalForm((c) => ({ ...c, rental_start_date_time: e.target.value }))} required />
         </label>
-        <input type="number" min="0" placeholder="Start odometer" value={rentalForm.start_odometer_reading} onChange={(e) => setRentalForm((c) => ({ ...c, start_odometer_reading: e.target.value }))} required />
         <button type="submit">Start Rental</button>
       </form>
     </SectionCard>
