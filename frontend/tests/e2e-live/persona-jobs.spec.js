@@ -8,9 +8,31 @@ async function waitForSync(page) {
 
 async function openPanel(page, buttonName, field) {
   const button = page.getByRole("button", { name: buttonName });
-  await expect(button).toBeVisible();
-  await button.click();
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await expect(button).toBeVisible();
+    await button.click();
+    if (await field.isVisible()) {
+      return;
+    }
+    await page.waitForTimeout(250);
+  }
   await expect(field).toBeVisible();
+}
+
+async function selectOption(page, name, option) {
+  const select = page.getByRole("combobox", { name });
+  await expect(select).toBeVisible();
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      await select.selectOption(option);
+      return;
+    } catch (error) {
+      if (attempt === 2) {
+        throw error;
+      }
+      await page.waitForTimeout(250);
+    }
+  }
 }
 
 function futureLocalDateTime(daysFromNow, hour = 10) {
@@ -82,7 +104,7 @@ test("customer can book and track a reservation", async ({ page }) => {
   }
   await expect(bookingDialog).toBeVisible();
   await fillCustomerFields(page, "Customer");
-  await page.getByRole("combobox", { name: /pick-up location/i }).selectOption({ index: 1 });
+  await selectOption(page, /pick-up location/i, { index: 1 });
   await page.locator("input[name='class_id']:not(:disabled)").first().check();
   await page.getByLabel("Pickup", { exact: true }).fill(futureLocalDateTime(10));
   await page.getByLabel("Drop-off", { exact: true }).fill(futureLocalDateTime(13));
@@ -90,7 +112,7 @@ test("customer can book and track a reservation", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/customer$/);
   await expect(page.getByText(/reservation booked/i)).toBeVisible();
-  await expect(page.getByText(/trip status/i)).toBeVisible();
+  await expect(page.getByText("Trip Status", { exact: true })).toBeVisible();
   await expect(page.getByText(/reservation journey/i)).toBeVisible();
 });
 
@@ -103,11 +125,12 @@ test("agent can intake, start pickup, and close a rental", async ({ page }) => {
   await page.getByRole("button", { name: /save customer/i }).click();
   await expect(page.getByText(/customer created/i)).toBeVisible();
   await waitForSync(page);
+  await page.waitForTimeout(750);
 
   await openPanel(page, /^create reservation$/i, page.getByRole("combobox", { name: /reservation customer/i }));
-  await page.getByRole("combobox", { name: /reservation customer/i }).selectOption({ index: 1 });
-  await page.getByRole("combobox", { name: /reservation branch/i }).selectOption({ index: 1 });
-  await page.getByRole("combobox", { name: /reservation vehicle class/i }).selectOption({ index: 1 });
+  await selectOption(page, /reservation customer/i, { index: 1 });
+  await selectOption(page, /reservation branch/i, { index: 1 });
+  await selectOption(page, /reservation vehicle class/i, { index: 1 });
   await page.getByLabel("Pickup", { exact: true }).fill(futureLocalDateTime(15));
   await page.getByLabel("Return", { exact: true }).fill(futureLocalDateTime(17));
   await page.getByRole("button", { name: /create reservation/i }).click();
@@ -123,12 +146,20 @@ test("agent can intake, start pickup, and close a rental", async ({ page }) => {
   await page.getByLabel("Rental start").fill(futureLocalDateTime(15));
   await page.getByRole("button", { name: /start rental/i }).click();
   await expect(page.getByText(/pickup complete and rental started/i)).toBeVisible();
+  await waitForSync(page);
 
   await page.getByRole("button", { name: /^return$/i }).click();
+  await waitForSync(page);
+  await expect(page.getByRole("combobox", { name: /open contract/i })).toBeVisible();
   await page.getByLabel("Rental end").fill(futureLocalDateTime(16));
   await page.getByPlaceholder("Return odometer").fill("200000");
   await page.getByPlaceholder("Actual cost override").fill("175");
+  const closeResponse = page.waitForResponse((response) => (
+    response.url().includes("/api/v1/rental-agreements/")
+    && response.request().method() === "PUT"
+  ));
   await page.getByRole("button", { name: /close and bill/i }).click();
+  await expect((await closeResponse).ok()).toBeTruthy();
   await expect(page.getByText(/rental closed and billed/i)).toBeVisible();
 });
 
@@ -155,6 +186,7 @@ test("admin can manage pricing and fleet with delete confirmation guarded", asyn
   await page.getByRole("button", { name: /save class/i }).click();
   await expect(page.getByText(/car class created/i)).toBeVisible();
   await waitForSync(page);
+  await page.waitForTimeout(750);
   await expect(page.getByText(`Live-${stamp}`).first()).toBeVisible();
 
   await openPanel(page, /^add model$/i, page.getByPlaceholder("Model name"));
@@ -163,10 +195,11 @@ test("admin can manage pricing and fleet with delete confirmation guarded", asyn
   await page.getByPlaceholder("Model year").fill("2026");
   const modelClassSelect = page.getByRole("combobox", { name: /model vehicle class/i });
   await expect(modelClassSelect.locator("option", { hasText: `Live-${stamp}` })).toHaveCount(1);
-  await modelClassSelect.selectOption({ label: `Live-${stamp}` });
+  await selectOption(page, /model vehicle class/i, { label: `Live-${stamp}` });
   await page.getByRole("button", { name: /save model/i }).click();
   await expect(page.getByText(/model created/i)).toBeVisible();
   await waitForSync(page);
+  await page.waitForTimeout(750);
 
   await page.getByRole("button", { name: /^fleet$/i }).click();
   await openPanel(page, /^add location$/i, page.getByPlaceholder("Street"));
@@ -177,13 +210,14 @@ test("admin can manage pricing and fleet with delete confirmation guarded", asyn
   await page.getByRole("button", { name: /save location/i }).click();
   await expect(page.getByText(/location created/i)).toBeVisible();
   await waitForSync(page);
+  await page.waitForTimeout(750);
   await expect(page.getByText(`Admin${stamp}, NJ`).first()).toBeVisible();
 
   await openPanel(page, /^register car$/i, page.getByRole("combobox", { name: /car branch location/i }));
   await page.getByPlaceholder("VIN").fill(`LV${stamp}ABCDEF1`);
   await page.getByPlaceholder("Current odometer").fill("25");
-  await page.getByRole("combobox", { name: /car branch location/i }).selectOption({ label: `Admin${stamp}, NJ` });
-  await page.getByRole("combobox", { name: /car model/i }).selectOption({ label: `Milan Model-${stamp}` });
+  await selectOption(page, /car branch location/i, { label: `Admin${stamp}, NJ` });
+  await selectOption(page, /car model/i, { label: `Milan Model-${stamp}` });
   await page.getByRole("button", { name: /save car/i }).click();
   await expect(page.getByText(/car added to fleet/i)).toBeVisible();
 
