@@ -98,7 +98,7 @@ export function AgentWorkspace() {
     }, "Pickup complete and rental started.");
   }
 
-  async function closeRental(event: React.FormEvent) {
+  async function closeRental(event: React.SyntheticEvent) {
     event.preventDefault();
     await staff.perform(async () => {
       await api.closeRentalAgreement(returnForm.contract_no, {

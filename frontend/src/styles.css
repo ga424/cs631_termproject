@@ -588,7 +588,12 @@ select {
 }
 
 .stat-grid {
+  display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  width: 100%;
+  /* This is the missing piece: span the full width of the parent grid */
+  grid-column: 1 / -1; 
 }
 
 .stat-tile {

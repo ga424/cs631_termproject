@@ -99,6 +99,20 @@ UNAVAILABLE_VEHICLE_CATALOG = [
     ("Standard Elite Sport", "Mercedes-Benz C300", "Mercedes-Benz", 2024, 84.65, 533.30),
 ]
 
+CORE_COVERAGE_CLASS_NAMES = [
+    "Economy",
+    "Compact",
+    "Mid-size",
+    "Full-size",
+    "SUV",
+    "Luxury",
+]
+
+
+def coverage_class_names():
+    """Return classes that should have physical inventory in every demo branch."""
+    return list(dict.fromkeys(CORE_COVERAGE_CLASS_NAMES + [item[0] for item in SAMPLE_VEHICLE_CATALOG]))
+
 
 def preferred_demo_username(customer):
     """Return a stable demo username for known seeded users, else a normalized fallback."""
@@ -328,7 +342,68 @@ def ensure_sample_vehicle_catalog(session):
             model.model_year = model_year
             model.class_id = car_class.class_id
 
+    ensure_branch_vehicle_coverage(session, locations)
     session.commit()
+
+
+def ensure_branch_vehicle_coverage(session, locations):
+    """Ensure agents can assign cars for demo reservations at every branch/class pair."""
+    open_rental_vins = {
+        vin
+        for (vin,) in (
+            session.query(RentalAgreement.vin)
+            .filter(RentalAgreement.rental_end_date_time.is_(None))
+            .all()
+        )
+    }
+    class_names = coverage_class_names()
+
+    for location_index, location in enumerate(locations, start=1):
+        for class_index, class_name in enumerate(class_names, start=1):
+            car_class = session.query(CarClass).filter(CarClass.class_name == class_name).first()
+            if car_class is None:
+                continue
+
+            model = (
+                session.query(Model)
+                .filter(Model.class_id == car_class.class_id)
+                .order_by(Model.model_name.asc())
+                .first()
+            )
+            if model is None:
+                model = Model(
+                    model_name=f"Demo {class_name}",
+                    make_name="Demo",
+                    model_year=2024,
+                    class_id=car_class.class_id,
+                )
+                session.add(model)
+                session.flush()
+
+            available_count = (
+                session.query(Car)
+                .join(Model, Car.model_name == Model.model_name)
+                .filter(
+                    Car.location_id == location.location_id,
+                    Model.class_id == car_class.class_id,
+                    ~Car.vin.in_(open_rental_vins) if open_rental_vins else True,
+                )
+                .count()
+            )
+
+            slot = 1
+            while available_count < 2:
+                vin = f"COV{location_index:02d}{class_index:02d}{slot:02d}{available_count:08d}"
+                slot += 1
+                if session.query(Car).filter(Car.vin == vin).first() is not None:
+                    continue
+                session.add(Car(
+                    vin=vin,
+                    current_odometer_reading=4000 + (location_index * 1000) + (class_index * 125) + slot,
+                    location_id=location.location_id,
+                    model_name=model.model_name,
+                ))
+                available_count += 1
 
 
 def ensure_lifecycle_event(session, reservation, event_type, *, rental=None, actor_role="system", actor_username="seed", event_timestamp=None, notes=None):

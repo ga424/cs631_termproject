@@ -26,10 +26,11 @@ export function ReturnTab({
   statusForm: StatusForm;
   setReturnForm: React.Dispatch<React.SetStateAction<AgentReturnForm>>;
   setStatusForm: React.Dispatch<React.SetStateAction<StatusForm>>;
-  closeRental: (event: React.FormEvent) => void;
+  closeRental: (event: React.SyntheticEvent) => void;
   updateStatus: (event: React.FormEvent) => void;
 }) {
   const selectedRental = staff.openRentals.find((item) => item.contract_no === returnForm.contract_no);
+  const canCloseRental = Boolean(returnForm.contract_no && returnForm.rental_end_date_time && returnForm.end_odometer_reading);
 
   return (
     <>
@@ -52,7 +53,7 @@ export function ReturnTab({
           </label>
           <input type="number" min={selectedRental?.start_odometer_reading || 0} placeholder="Return odometer" value={returnForm.end_odometer_reading} onChange={(e) => setReturnForm((c) => ({ ...c, end_odometer_reading: e.target.value }))} required />
           <input type="number" min="0" step="0.01" placeholder="Actual cost override (optional)" value={returnForm.actual_cost} onChange={(e) => setReturnForm((c) => ({ ...c, actual_cost: e.target.value }))} />
-          <button type="submit">Close And Bill</button>
+          <button type="button" disabled={!canCloseRental} onClick={closeRental}>Close And Bill</button>
         </form>
       </SectionCard>
 
