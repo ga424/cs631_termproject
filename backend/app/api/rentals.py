@@ -2,6 +2,7 @@
 
 import math
 
+from datetime import timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
@@ -42,6 +43,12 @@ def _calculate_rental_cost(total_days: int, daily_rate: float, weekly_rate: floa
     return round(best_cost, 2)
 
 
+def _to_naive_utc(value):
+    if value is None or value.tzinfo is None:
+        return value
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+
 @router.get("", response_model=list[RentalAgreementSchema])
 def list_rental_agreements(db: Session = Depends(get_db)):
     """List all rental agreements"""
@@ -65,6 +72,7 @@ def create_rental_agreement(
     db: Session = Depends(get_db),
 ):
     """Create a new rental agreement"""
+    rental_start = _to_naive_utc(agreement.rental_start_date_time)
     reservation = (
         db.query(Reservation)
         .filter(Reservation.reservation_id == agreement.reservation_id)
@@ -133,7 +141,7 @@ def create_rental_agreement(
     db_agreement = RentalAgreement(
         reservation_id=agreement.reservation_id,
         vin=agreement.vin,
-        rental_start_date_time=agreement.rental_start_date_time,
+        rental_start_date_time=rental_start,
         start_odometer_reading=car.current_odometer_reading,
     )
     reservation.reservation_status = "FULFILLED"
@@ -145,7 +153,7 @@ def create_rental_agreement(
         event_type="PICKED_UP",
         actor=current_user,
         contract_no=db_agreement.contract_no,
-        event_timestamp=agreement.rental_start_date_time,
+        event_timestamp=rental_start,
         notes=f"Assigned VIN {agreement.vin} at odometer {car.current_odometer_reading}.",
     )
     record_lifecycle_event(
@@ -154,7 +162,7 @@ def create_rental_agreement(
         event_type="RENTAL_OPENED",
         actor=current_user,
         contract_no=db_agreement.contract_no,
-        event_timestamp=agreement.rental_start_date_time,
+        event_timestamp=rental_start,
         notes="Rental agreement opened from fulfilled reservation.",
     )
     db.commit()
@@ -175,6 +183,9 @@ def update_rental_agreement(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rental agreement not found")
     
     update_data = agreement.dict(exclude_unset=True)
+
+    if "rental_end_date_time" in update_data:
+        update_data["rental_end_date_time"] = _to_naive_utc(update_data["rental_end_date_time"])
 
     rental_end = update_data.get("rental_end_date_time", db_agreement.rental_end_date_time)
     end_odometer = update_data.get("end_odometer_reading", db_agreement.end_odometer_reading)

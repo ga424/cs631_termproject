@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -211,5 +211,37 @@ def test_return_requires_end_odometer_when_closing_rental():
 
         assert response.status_code == 400
         assert "end_odometer_reading is required" in response.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_return_accepts_timezone_aware_closeout_datetime():
+    override, _SessionLocal, ids = _override_lifecycle_db()
+    app.dependency_overrides[get_db] = override
+    try:
+        client = TestClient(app)
+        agent_headers = auth_headers(client, username="agent", password="agent123")
+        start_response = client.post(
+            "/api/v1/rental-agreements",
+            json={
+                "reservation_id": str(ids["reservation_id"]),
+                "vin": ids["vin"],
+                "rental_start_date_time": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+            },
+            headers=agent_headers,
+        )
+        assert start_response.status_code == 201
+
+        response = client.put(
+            f"/api/v1/rental-agreements/{start_response.json()['contract_no']}",
+            json={
+                "rental_end_date_time": (datetime.now(timezone.utc).replace(microsecond=0) + timedelta(hours=4)).isoformat(),
+                "end_odometer_reading": ids["start_odometer"] + 25,
+            },
+            headers=agent_headers,
+        )
+
+        assert response.status_code == 200
+        assert response.json()["rental_end_date_time"]
     finally:
         app.dependency_overrides.clear()
