@@ -1,0 +1,208 @@
+import { getStoredAuthSession } from "./storage";
+import type { ZodType } from "zod";
+import {
+  authSessionSchema,
+  carSchema,
+  carClassSchema,
+  carClassesSchema,
+  carsSchema,
+  customerSchema,
+  customerPortalBookingResponseSchema,
+  customerPortalCatalogSchema,
+  customerPortalSummarySchema,
+  customersSchema,
+  dashboardOverviewSchema,
+  demoCustomersSchema,
+  locationSchema,
+  locationsSchema,
+  modelSchema,
+  modelsSchema,
+  rentalAgreementSchema,
+  rentalAgreementsSchema,
+  reservationSchema,
+  reservationsSchema,
+} from "./schemas";
+import type {
+  Car,
+  CarClass,
+  Customer,
+  CustomerDemoAccount,
+  CustomerPortalBookingRequest,
+  CustomerPortalBookingResponse,
+  CustomerPortalCatalog,
+  CustomerPortalSummary,
+  CustomerSignupRequest,
+  DashboardOverview,
+  Location,
+  LoginRequest,
+  Model,
+  Reservation,
+  RentalAgreement,
+} from "./types";
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+
+type RequestOptions = RequestInit & {
+  skipAuth?: boolean;
+};
+
+async function apiRequest<T>(path: string, options: RequestOptions = {}, schema?: ZodType<T>): Promise<T> {
+  const { skipAuth, ...fetchOptions } = options;
+  const token = skipAuth ? "" : getStoredAuthSession()?.access_token;
+  const headers = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(fetchOptions.headers || {}),
+  };
+
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...fetchOptions,
+    headers,
+  });
+
+  if (!response.ok) {
+    let detail = "";
+    try {
+      const payload = await response.json();
+      detail = payload?.detail || payload?.message || "";
+    } catch {
+      detail = "";
+    }
+    throw new Error(detail ? `Request failed (${response.status}): ${detail}` : `Request failed: ${response.status}`);
+  }
+
+  if (response.status === 204) {
+    return null as T;
+  }
+
+  const payload = await response.json();
+  if (!schema) {
+    return payload as T;
+  }
+
+  const parsed = schema.safeParse(payload);
+  if (!parsed.success) {
+    throw new Error(`Invalid API response for ${path}`);
+  }
+
+  return parsed.data;
+}
+
+export const api = {
+  login(payload: LoginRequest) {
+    return apiRequest("/api/v1/auth/login", {
+      method: "POST",
+      skipAuth: true,
+      body: JSON.stringify(payload),
+    }, authSessionSchema);
+  },
+  signupCustomer(payload: CustomerSignupRequest) {
+    return apiRequest("/api/v1/auth/customer-signup", {
+      method: "POST",
+      skipAuth: true,
+      body: JSON.stringify(payload),
+    }, authSessionSchema);
+  },
+  listDemoCustomers() {
+    return apiRequest<CustomerDemoAccount[]>("/api/v1/auth/demo-customers", { skipAuth: true }, demoCustomersSchema);
+  },
+  getCustomerPortalCatalog() {
+    return apiRequest<CustomerPortalCatalog>("/api/v1/customer-portal/catalog", {}, customerPortalCatalogSchema);
+  },
+  getMyCustomerPortalSummary() {
+    return apiRequest<CustomerPortalSummary>("/api/v1/customer-portal/me", {}, customerPortalSummarySchema);
+  },
+  getCustomerPortalSummary(customerId: string) {
+    return apiRequest<CustomerPortalSummary>(`/api/v1/customer-portal/summary/${customerId}`, {}, customerPortalSummarySchema);
+  },
+  createCustomerBooking(payload: CustomerPortalBookingRequest) {
+    return apiRequest<CustomerPortalBookingResponse>("/api/v1/customer-portal/bookings", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }, customerPortalBookingResponseSchema);
+  },
+  listCustomers() {
+    return apiRequest<Customer[]>("/api/v1/customers", {}, customersSchema);
+  },
+  listLocations() {
+    return apiRequest<Location[]>("/api/v1/locations", {}, locationsSchema);
+  },
+  listCarClasses() {
+    return apiRequest<CarClass[]>("/api/v1/car-classes", {}, carClassesSchema);
+  },
+  listModels() {
+    return apiRequest<Model[]>("/api/v1/models", {}, modelsSchema);
+  },
+  listCars() {
+    return apiRequest<Car[]>("/api/v1/cars", {}, carsSchema);
+  },
+  listReservations() {
+    return apiRequest<Reservation[]>("/api/v1/reservations", {}, reservationsSchema);
+  },
+  listRentalAgreements() {
+    return apiRequest<RentalAgreement[]>("/api/v1/rental-agreements", {}, rentalAgreementsSchema);
+  },
+  getDashboardOverview() {
+    return apiRequest<DashboardOverview>("/api/v1/dashboard/overview", {}, dashboardOverviewSchema);
+  },
+  createCustomer(payload: Omit<Customer, "customer_id">) {
+    return apiRequest<Customer>("/api/v1/customers", { method: "POST", body: JSON.stringify(payload) }, customerSchema);
+  },
+  createReservation(payload: Omit<Reservation, "reservation_id">) {
+    return apiRequest<Reservation>("/api/v1/reservations", { method: "POST", body: JSON.stringify(payload) }, reservationSchema);
+  },
+  updateReservationStatus(reservationId: string, reservation_status: string) {
+    return apiRequest<Reservation>(`/api/v1/reservations/${reservationId}`, {
+      method: "PUT",
+      body: JSON.stringify({ reservation_status }),
+    }, reservationSchema);
+  },
+  createRentalAgreement(payload: {
+    reservation_id: string;
+    vin: string;
+    rental_start_date_time: string;
+    start_odometer_reading?: number;
+  }) {
+    return apiRequest<RentalAgreement>("/api/v1/rental-agreements", { method: "POST", body: JSON.stringify(payload) }, rentalAgreementSchema);
+  },
+  closeRentalAgreement(contractNo: string, payload: { rental_end_date_time: string; end_odometer_reading: number; actual_cost?: number }) {
+    return apiRequest<RentalAgreement>(`/api/v1/rental-agreements/${contractNo}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }, rentalAgreementSchema);
+  },
+  createLocation(payload: Omit<Location, "location_id">) {
+    return apiRequest<Location>("/api/v1/locations", { method: "POST", body: JSON.stringify(payload) }, locationSchema);
+  },
+  deleteLocation(locationId: string) {
+    return apiRequest<void>(`/api/v1/locations/${locationId}`, { method: "DELETE" });
+  },
+  createCarClass(payload: Omit<CarClass, "class_id">) {
+    return apiRequest<CarClass>("/api/v1/car-classes", { method: "POST", body: JSON.stringify(payload) }, carClassSchema);
+  },
+  createModel(payload: Model) {
+    return apiRequest<Model>("/api/v1/models", { method: "POST", body: JSON.stringify(payload) }, modelSchema);
+  },
+  createCar(payload: Car) {
+    return apiRequest<Car>("/api/v1/cars", { method: "POST", body: JSON.stringify(payload) }, carSchema);
+  },
+};
+
+export function formatDateTime(value: string | null | undefined) {
+  if (!value) {
+    return "-";
+  }
+  return new Date(value).toLocaleString();
+}
+
+export function formatCurrency(value: number | null | undefined) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(Number(value || 0));
+}
+
+export function formatPercent(value: number | null | undefined) {
+  return `${Number(value || 0).toFixed(1)}%`;
+}

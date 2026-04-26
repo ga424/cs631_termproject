@@ -31,7 +31,36 @@ const testCustomer = {
   exp_year: 2028
 };
 
-async function signInAs(page, role) {
+async function signInAs(page, role, overrides = {}) {
+  const catalogPayload = overrides.catalogPayload || {
+    locations: [],
+    car_classes: [],
+    vehicle_options: [{
+      class_id: "00000000-0000-0000-0000-000000000201",
+      class_name: "Convertible",
+      similar_model: "Ford Mustang Convertible or Similar",
+      seats: 4,
+      doors: 2,
+      bags: 1,
+      daily_rate: 89.95,
+      weekly_rate: 566.69,
+      rate_badge: "Discounted Rate",
+      upgrade_badge: null,
+      available_count: 0,
+      is_available: false
+    }],
+    workflow: []
+  };
+
+  const summaryPayload = overrides.summaryPayload || {
+    customer: testCustomer,
+    reservations: [],
+    rental_agreements: [],
+    active_rentals: [],
+    lifecycle_events: [],
+    workflow: []
+  };
+
   await page.route("**/api/v1/auth/login", async (route) => {
     await route.fulfill({
       contentType: "application/json",
@@ -51,38 +80,13 @@ async function signInAs(page, role) {
   await page.route("**/api/v1/customer-portal/catalog", async (route) => {
     await route.fulfill({
       contentType: "application/json",
-      body: JSON.stringify({
-        locations: [],
-        car_classes: [],
-        vehicle_options: [{
-          class_id: "00000000-0000-0000-0000-000000000201",
-          class_name: "Convertible",
-          similar_model: "Ford Mustang Convertible or Similar",
-          seats: 4,
-          doors: 2,
-          bags: 1,
-          daily_rate: 89.95,
-          weekly_rate: 566.69,
-          rate_badge: "Discounted Rate",
-          upgrade_badge: null,
-          available_count: 0,
-          is_available: false
-        }],
-        workflow: []
-      })
+      body: JSON.stringify(catalogPayload)
     });
   });
   await page.route("**/api/v1/customer-portal/me", async (route) => {
     await route.fulfill({
       contentType: "application/json",
-      body: JSON.stringify({
-        customer: testCustomer,
-        reservations: [],
-        rental_agreements: [],
-        active_rentals: [],
-        lifecycle_events: [],
-        workflow: []
-      })
+      body: JSON.stringify(summaryPayload)
     });
   });
   await page.route("**/api/v1/auth/demo-customers", async (route) => {
@@ -157,4 +161,23 @@ test("admin sees the mobile-first admin console with fleet and pricing tabs", as
   await expect(page.getByRole("button", { name: /^fleet$/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /^pricing$/i })).toBeVisible();
   await expect(page.getByText("Operational Health")).toBeVisible();
+});
+
+test("customer sees a validation error when customer summary payload is malformed", async ({ page }) => {
+  await signInAs(page, "customer", {
+    summaryPayload: {
+      customer: {
+        ...testCustomer,
+        exp_month: "12"
+      },
+      reservations: [],
+      rental_agreements: [],
+      active_rentals: [],
+      lifecycle_events: [],
+      workflow: []
+    }
+  });
+
+  await expect(page).toHaveURL(/\/customer$/);
+  await expect(page.getByText(/invalid api response for \/api\/v1\/customer-portal\/me/i)).toBeVisible();
 });
