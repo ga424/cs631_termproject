@@ -22,6 +22,11 @@ export function PricingTab({
   createModel: (event: React.FormEvent) => Promise<void> | void;
 }) {
   const [openForm, setOpenForm] = useState<"class" | "model" | "">("");
+  const modelsByClassId = staff.models.reduce<Record<string, typeof staff.models>>((groups, model) => {
+    groups[model.class_id] = [...(groups[model.class_id] || []), model];
+    return groups;
+  }, {});
+  const selectedClass = staff.classById[modelForm.class_id];
 
   return (
     <>
@@ -50,6 +55,13 @@ export function PricingTab({
               <option value="">Class</option>
               {staff.carClasses.map((item) => <option key={item.class_id} value={item.class_id}>{item.class_name}</option>)}
             </select>
+            {selectedClass ? (
+              <div className="identity-card">
+                <strong>Model-class relationship</strong>
+                <span>{selectedClass.class_name} controls this model's rates and reservation class.</span>
+                <p>Cars registered to this model will be assignable only for {selectedClass.class_name} reservations.</p>
+              </div>
+            ) : null}
             <div className="action-strip">
               <button type="submit">Save Model</button>
               <button type="button" className="ghost-button" onClick={() => setOpenForm("")}>Cancel</button>
@@ -64,10 +76,30 @@ export function PricingTab({
             id: item.class_id,
             title: item.class_name,
             subtitle: `${formatCurrency(item.daily_rate)} day / ${formatCurrency(item.weekly_rate)} week`,
-            meta: "Pricing",
+            meta: `${modelsByClassId[item.class_id]?.length || 0} models`,
           }))}
           emptyText="No classes configured."
         />
+        <div className="class-model-grid">
+          {staff.carClasses.map((carClass) => {
+            const models = modelsByClassId[carClass.class_id] || [];
+            return (
+              <article key={carClass.class_id} className="identity-card">
+                <strong>{carClass.class_name}</strong>
+                <span>{formatCurrency(carClass.daily_rate)}/day · {formatCurrency(carClass.weekly_rate)}/week</span>
+                {models.length ? (
+                  <ul className="compact-list">
+                    {models.map((model) => (
+                      <li key={model.model_name}>{model.make_name} {model.model_name} ({model.model_year})</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No models assigned to this class.</p>
+                )}
+              </article>
+            );
+          })}
+        </div>
       </SectionCard>
     </>
   );

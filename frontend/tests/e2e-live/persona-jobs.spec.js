@@ -217,7 +217,7 @@ test("admin can manage pricing and fleet with delete confirmation guarded", asyn
   await page.getByPlaceholder("VIN").fill(`LV${stamp}ABCDEF1`);
   await page.getByPlaceholder("Current odometer").fill("25");
   await selectOption(page, /car branch location/i, { label: `Admin${stamp}, NJ` });
-  await selectOption(page, /car model/i, { label: `Milan Model-${stamp}` });
+  await selectOption(page, /car model/i, { value: `Model-${stamp}` });
   await page.getByRole("button", { name: /save car/i }).click();
   await expect(page.getByText(/car added to fleet/i)).toBeVisible();
 

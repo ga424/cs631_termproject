@@ -33,7 +33,14 @@ def create_car_class(car_class: CarClassCreate, db: Session = Depends(get_db)):
     """Create a new car class"""
     db_class = CarClass(**car_class.dict())
     db.add(db_class)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Car class name must be unique",
+        ) from exc
     db.refresh(db_class)
     return db_class
 

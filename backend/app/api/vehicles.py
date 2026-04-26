@@ -32,7 +32,14 @@ def create_car(car: CarCreate, db: Session = Depends(get_db)):
     """Create a new car"""
     db_car = Car(**car.dict())
     db.add(db_car)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="VIN must be unique and location_id/model_name must reference existing records",
+        ) from exc
     db.refresh(db_car)
     return db_car
 
@@ -49,7 +56,14 @@ def update_car(vin: str, car: CarUpdate, db: Session = Depends(get_db)):
     for field, value in update_data.items():
         setattr(db_car, field, value)
     
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="location_id and model_name must reference existing records",
+        ) from exc
     db.refresh(db_car)
     return db_car
 

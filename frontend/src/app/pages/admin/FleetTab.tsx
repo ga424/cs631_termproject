@@ -23,6 +23,12 @@ export function FleetTab({
   deleteLocation: (locationId: string, city: string) => void;
 }) {
   const [openForm, setOpenForm] = useState<"location" | "car" | "">("");
+  const selectedModel = staff.modelByName[carForm.model_name];
+  const selectedModelClass = selectedModel ? staff.classById[selectedModel.class_id] : undefined;
+  const modelsByClass = staff.carClasses.map((carClass) => ({
+    carClass,
+    models: staff.models.filter((model) => model.class_id === carClass.class_id),
+  })).filter((group) => group.models.length > 0);
 
   return (
     <>
@@ -55,8 +61,23 @@ export function FleetTab({
             </select>
             <select aria-label="Car model" value={carForm.model_name} onChange={(e) => setCarForm((c) => ({ ...c, model_name: e.target.value }))} required>
               <option value="">Model</option>
-              {staff.models.map((item) => <option key={item.model_name} value={item.model_name}>{item.make_name} {item.model_name}</option>)}
+              {modelsByClass.map((group) => (
+                <optgroup key={group.carClass.class_id} label={group.carClass.class_name}>
+                  {group.models.map((item) => (
+                    <option key={item.model_name} value={item.model_name}>
+                      {item.make_name} {item.model_name} ({item.model_year})
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
             </select>
+            {selectedModel ? (
+              <div className="identity-card">
+                <strong>Relational assignment</strong>
+                <span>{selectedModel.make_name} {selectedModel.model_name} is governed by {selectedModelClass?.class_name || "Unknown class"}</span>
+                <p>Cars inherit their rental class through the selected model. Change the model if this VIN belongs to a different class.</p>
+              </div>
+            ) : null}
             <div className="action-strip">
               <button type="submit">Save Car</button>
               <button type="button" className="ghost-button" onClick={() => setOpenForm("")}>Cancel</button>

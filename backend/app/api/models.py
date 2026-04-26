@@ -32,7 +32,14 @@ def create_model(model: ModelCreate, db: Session = Depends(get_db)):
     """Create a new model"""
     db_model = Model(**model.dict())
     db.add(db_model)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Model name must be unique and class_id must reference an existing car class",
+        ) from exc
     db.refresh(db_model)
     return db_model
 
@@ -49,7 +56,14 @@ def update_model(model_name: str, model: ModelUpdate, db: Session = Depends(get_
     for field, value in update_data.items():
         setattr(db_model, field, value)
     
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Model class_id must reference an existing car class",
+        ) from exc
     db.refresh(db_model)
     return db_model
 
