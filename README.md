@@ -67,7 +67,7 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
 ### Prerequisites
 - Docker & Docker Compose (version 20.10+)
 - macOS/Linux/Windows with Docker Desktop
-- Python 3.11 for local backend tests outside Docker
+- Python 3.14 for local backend tests outside Docker
 - Node.js 20+ for local frontend builds and Playwright E2E tests
 
 ### Setup & Run
@@ -459,9 +459,9 @@ API_HOST=0.0.0.0
 
 1. **Create virtual environment**
    ```bash
+   python3.14 -m venv .venv
+   source .venv/bin/activate
    cd backend
-   python3.11 -m venv venv
-   source venv/bin/activate
    ```
 
 2. **Install dependencies**

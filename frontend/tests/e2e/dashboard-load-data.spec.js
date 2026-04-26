@@ -126,7 +126,7 @@ test("customer is routed into the customer portal", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/customer$/);
   await expect(page.getByRole("heading", { name: /customer portal/i })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /my reservation and rental/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /my trips?/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /^my trip$/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /reserve a car/i })).toBeVisible();
 });

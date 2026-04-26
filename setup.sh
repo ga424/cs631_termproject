@@ -24,6 +24,55 @@ print_info() {
     echo "ℹ️  $1"
 }
 
+ensure_python314_venv() {
+    local required_minor="3.14"
+    local venv_dir=".venv"
+    local venv_python="$venv_dir/bin/python"
+    local python_cmd=""
+
+    print_info "Validating local Python runtime for backend checks (requires Python $required_minor)..."
+
+    if command -v python3.14 >/dev/null 2>&1; then
+        python_cmd="python3.14"
+    elif command -v python3 >/dev/null 2>&1; then
+        local python3_version
+        python3_version="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+        if [ "$python3_version" = "$required_minor" ]; then
+            python_cmd="python3"
+        fi
+    fi
+
+    if [ -z "$python_cmd" ]; then
+        print_error "No Python $required_minor interpreter was found on PATH"
+        echo ""
+        echo "Install Python 3.14, then run this script again."
+        echo ""
+        echo "  macOS (Homebrew): brew install python@3.14"
+        echo ""
+        exit 1
+    fi
+
+    if [ -x "$venv_python" ]; then
+        local venv_version
+        venv_version="$($venv_python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+        if [ "$venv_version" != "$required_minor" ]; then
+            print_error "Detected $venv_dir with Python $venv_version (expected $required_minor)"
+            echo ""
+            echo "Recreate the virtual environment with Python $required_minor:"
+            echo "  rm -rf $venv_dir"
+            echo "  python3.14 -m venv $venv_dir"
+            echo ""
+            exit 1
+        fi
+        print_success "Using existing $venv_dir (Python $venv_version)"
+        return
+    fi
+
+    print_info "Creating $venv_dir with $python_cmd..."
+    "$python_cmd" -m venv "$venv_dir"
+    print_success "Created $venv_dir with Python $required_minor"
+}
+
 print_header "Rental Car Management System - Startup Assistant"
 
 # Check if Docker is running
@@ -47,6 +96,8 @@ print_success "Docker is running (v$DOCKER_VERSION)"
 # Navigate to project directory
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_DIR"
+
+ensure_python314_venv
 
 print_header "Starting Services"
 

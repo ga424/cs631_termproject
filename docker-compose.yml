@@ -53,7 +53,7 @@ services:
       dockerfile: Dockerfile
     container_name: rental_api
     environment:
-      DATABASE_URL: postgresql://${DATABASE_USER:-rental_user}:${DATABASE_PASSWORD:-rental_password}@postgres:5432/${DATABASE_NAME:-rental_db}
+      DATABASE_URL: postgresql+psycopg://${DATABASE_USER:-rental_user}:${DATABASE_PASSWORD:-rental_password}@postgres:5432/${DATABASE_NAME:-rental_db}
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432
       FASTAPI_ENV: ${FASTAPI_ENV:-development}

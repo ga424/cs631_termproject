@@ -6,7 +6,7 @@
    - On macOS: Open `Docker.app` from Applications
    - You should see the Docker icon in your menu bar
 2. **Use supported local runtimes when running checks outside Docker**
-   - Python 3.11 for backend tests
+  - Python 3.14 for backend tests
    - Node.js 20+ for frontend build and Playwright E2E
 
 ## Step 1: Start All Services

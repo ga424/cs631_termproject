@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     """Application configuration shared across API, DB, and scripts."""
     
     # Database
-    database_url: str = "postgresql://rental_user:rental_password@postgres:5432/rental_db"
+    database_url: str = "postgresql+psycopg://rental_user:rental_password@postgres:5432/rental_db"
     database_host: str = "postgres"
     database_port: int = 5432
     database_name: str = "rental_db"
