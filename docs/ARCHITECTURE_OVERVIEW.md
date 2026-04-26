@@ -95,6 +95,8 @@ Comprehensive Entity Relationship Diagram (ERD) showing the complete database sc
 - Vehicle availability: Car is available if not currently in active rental
 - Agent vehicle assignment: car must match reservation pickup branch and requested class
 - Pricing: Calculated from car class rates × rental duration
+- Fleet governance: admins create classes first, assign models to classes, then register cars to existing models and locations
+- Integrity errors: duplicate class/model/VIN values and invalid class/location/model references are normalized into clear `409 Conflict` API errors
 - Odometer tracking: Pickup odometer is derived from the selected car; return odometer is captured at closeout
 - Auditability: Lifecycle events store actor, timestamp, reservation, optional contract, and notes
 - Payment: Stored on customer for recurring rental convenience

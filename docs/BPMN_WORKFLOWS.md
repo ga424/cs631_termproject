@@ -45,5 +45,6 @@ flowchart TD
 - Agents see active work queues and guided transactional flows.
 - Managers see branch health, overdue items, and blocked workflow cases.
 - Rental Admins see configuration and inventory controls, plus workflow governance visibility.
+- Rental Admins manage inventory in relational order: class rates, models assigned to classes, then VINs assigned to models and locations.
 - Pickup assignment dropdowns show only cars that are available, in the reservation pickup branch, and in the requested class.
 - Customer trip cards show lifecycle drilldowns from `rental_lifecycle_event`, including actor and timestamp.

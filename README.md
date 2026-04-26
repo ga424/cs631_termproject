@@ -422,12 +422,22 @@ This starts Docker Compose, seeds Postgres, and runs browser tests for customer 
 The database supports the full rental lifecycle across these primary entities:
 - **locations**: Branch pickup and return sites
 - **car_classes**: Rate cards by vehicle class
-- **models** and **cars**: Fleet catalog and specific VIN inventory
+- **models** and **cars**: Fleet catalog and specific VIN inventory. Models belong to one car class, and cars inherit their reservation/pricing class through their selected model.
 - **customers**: Customer identity, address, driver license, and payment data
 - **customer_account**: DB-backed customer login linked 1:1 to a customer row
 - **reservations**: Pickup/return requests by customer, class, and location
 - **rental_agreements**: Open and returned/billed contracts tied to a reservation and VIN
 - **rental_lifecycle_event**: durable audit trail of who reserved, canceled, picked up, opened, returned, and billed each trip
+
+### Fleet And Pricing Governance
+
+The admin console follows the same relational chain enforced by the database:
+
+1. Create a `car_class` with daily and weekly rates.
+2. Create a `model` under exactly one class.
+3. Register a physical `car` VIN against an existing model and location.
+
+The UI groups model choices by class and shows the selected model's governed class when registering a car. Backend endpoints return clear `409 Conflict` responses when a duplicate class/model/VIN is submitted or when a model, location, or class reference does not exist.
 
 ### Liquibase Migrations
 Database schema is managed through Liquibase XML changesets:

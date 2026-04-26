@@ -184,9 +184,10 @@ stateDiagram-v2
 ### Steps
 1. Manage branch locations.
 2. Manage class rates.
-3. Manage model catalog.
-4. Register/update cars and assigned location.
-5. Seed/demo data keeps at least two assignable vehicles per branch and bookable class, so agents can complete pickup assignments while the customer catalog can still show intentionally out-of-stock classes.
+3. Manage model catalog by assigning each model to one class.
+4. Register/update cars by selecting an existing location and model.
+5. Confirm the class inherited by the selected model before saving a VIN.
+6. Seed/demo data keeps at least two assignable vehicles per branch and bookable class, so agents can complete pickup assignments while the customer catalog can still show intentionally out-of-stock classes.
 
 ### Core Data
 - `location`, `car_class`, `model`, `car`
@@ -196,6 +197,12 @@ stateDiagram-v2
 - `/api/v1/car-classes`
 - `/api/v1/models`
 - `/api/v1/cars`
+
+### Integrity Rules
+- `car_class.class_name`, `model.model_name`, and `car.vin` must be unique.
+- `model.class_id` must reference an existing car class.
+- `car.model_name` and `car.location_id` must reference existing records.
+- Invalid references and duplicate keys return clear `409 Conflict` responses.
 
 ## Journey 7: Customer Self-Service Account And Trip History
 

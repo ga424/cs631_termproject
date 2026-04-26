@@ -206,6 +206,16 @@ curl http://localhost:8000/api/v1/customer-portal/me \
 
 The agent pickup vehicle dropdown only shows cars that match the selected reservation's pickup branch and class and are not already in an open rental. If it is empty after older seed data, run `./start.sh seed` again to add the latest branch/class fleet coverage.
 
+### Admin Class, Model, And Car Setup
+
+Use the admin console in this order:
+
+1. Add a car class with rates.
+2. Add a model and assign it to exactly one class.
+3. Register a car VIN by selecting an existing location and model.
+
+The model dropdown is grouped by class because cars inherit their reservation/pricing class through the selected model. If a duplicate class/model/VIN or missing relationship is submitted, the API returns a `409 Conflict` with a clear relationship error.
+
 ### Customers (5 Total)
 - John Doe (NY)
 - Jane Smith (CA)
