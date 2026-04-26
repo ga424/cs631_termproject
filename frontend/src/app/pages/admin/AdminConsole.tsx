@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as React from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useStaffData } from "../../hooks/useStaffData";
 import { MobileLayout } from "../../components/MobileLayout";
@@ -28,7 +29,8 @@ export function AdminConsole() {
   async function createLocation(event: React.FormEvent) {
     event.preventDefault();
     await staff.perform(async () => {
-      await api.createLocation(locationForm);
+      const created = await api.createLocation(locationForm);
+      setCarForm((current) => ({ ...current, location_id: created.location_id }));
       setLocationForm({ street: "", city: "", state: "", zip: "" });
     }, "Location created.");
   }
@@ -49,12 +51,13 @@ export function AdminConsole() {
   async function createModel(event: React.FormEvent) {
     event.preventDefault();
     await staff.perform(async () => {
-      await api.createModel({
+      const created = await api.createModel({
         model_name: modelForm.model_name,
         make_name: modelForm.make_name,
         model_year: Number(modelForm.model_year),
         class_id: modelForm.class_id,
       });
+      setCarForm((current) => ({ ...current, model_name: created.model_name }));
       setModelForm({ model_name: "", make_name: "", model_year: "", class_id: "" });
     }, "Model created.");
   }
