@@ -88,7 +88,7 @@ export function IntakeTab({
               <option value="">Customer</option>
               {staff.customers.map((item) => <option key={item.customer_id} value={item.customer_id}>{item.first_name} {item.last_name}</option>)}
             </select>
-            <select aria-label="Reservation pickup branch" value={reservationForm.location_id} onChange={(e) => setReservationForm((c) => ({ ...c, location_id: e.target.value }))} required>
+            <select aria-label="Reservation branch" value={reservationForm.location_id} onChange={(e) => setReservationForm((c) => ({ ...c, location_id: e.target.value }))} required>
               <option value="">Pickup branch</option>
               {staff.locations.map((item) => <option key={item.location_id} value={item.location_id}>{item.city}, {item.state}</option>)}
             </select>

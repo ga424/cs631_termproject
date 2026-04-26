@@ -199,7 +199,6 @@ export function MyTripTab({
       ) : (
         <div className="empty-block">
           <p>Create a reservation to unlock trip tracking.</p>
-          <button type="button" onClick={onReserve}>Reserve A Car</button>
         </div>
       )}
     </section>

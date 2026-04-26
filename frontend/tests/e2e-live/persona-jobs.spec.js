@@ -65,12 +65,12 @@ test("customer can book and track a reservation", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/customer$/);
   await expect(page.getByRole("heading", { name: /customer portal/i })).toBeVisible();
-  await page.getByRole("button", { name: /reserve a car/i }).click();
+  await page.getByRole("button", { name: /reserve a car/i }).first().click();
   await fillCustomerFields(page, "Customer");
   await page.getByRole("combobox").nth(0).selectOption({ index: 1 });
-  await page.getByRole("combobox").nth(1).selectOption({ index: 1 });
+  await page.locator("input[name='class_id']:not(:disabled)").first().check();
   await page.getByLabel("Pickup").fill(futureLocalDateTime(10));
-  await page.getByLabel("Return").fill(futureLocalDateTime(13));
+  await page.getByLabel("Drop-off").fill(futureLocalDateTime(13));
   await page.getByRole("button", { name: /reserve my car/i }).click();
 
   await expect(page).toHaveURL(/\/customer$/);
@@ -105,14 +105,13 @@ test("agent can intake, start pickup, and close a rental", async ({ page }) => {
   }
 
   await page.getByLabel("Rental start").fill(futureLocalDateTime(15));
-  await page.getByPlaceholder("Start odometer").fill("16000");
   await page.getByRole("button", { name: /start rental/i }).click();
   await expect(page.getByText(/pickup complete and rental started/i)).toBeVisible();
 
   await page.getByRole("button", { name: /^return$/i }).click();
   await page.getByRole("combobox").nth(0).selectOption({ index: 1 });
   await page.getByLabel("Rental end").fill(futureLocalDateTime(16));
-  await page.getByPlaceholder("End odometer").fill("16125");
+  await page.getByPlaceholder("Return odometer").fill("16125");
   await page.getByPlaceholder("Actual cost override").fill("175");
   await page.getByRole("button", { name: /close and bill/i }).click();
   await expect(page.getByText(/rental closed and billed/i)).toBeVisible();
@@ -145,7 +144,9 @@ test("admin can manage pricing and fleet with delete confirmation guarded", asyn
   await page.getByPlaceholder("Model name").fill(`Model-${stamp}`);
   await page.getByPlaceholder("Make").fill("Milan");
   await page.getByPlaceholder("Model year").fill("2026");
-  await page.getByRole("combobox").selectOption({ label: `Live-${stamp}` });
+  const modelClassSelect = page.getByRole("combobox", { name: /model vehicle class/i });
+  await expect(modelClassSelect.locator("option", { hasText: `Live-${stamp}` })).toHaveCount(1);
+  await modelClassSelect.selectOption({ label: `Live-${stamp}` });
   await page.getByRole("button", { name: /save model/i }).click();
   await expect(page.getByText(/model created/i)).toBeVisible();
 

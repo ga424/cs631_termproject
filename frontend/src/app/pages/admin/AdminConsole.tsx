@@ -36,11 +36,12 @@ export function AdminConsole() {
   async function createClass(event: React.FormEvent) {
     event.preventDefault();
     await staff.perform(async () => {
-      await api.createCarClass({
+      const created = await api.createCarClass({
         class_name: classForm.class_name,
         daily_rate: Number(classForm.daily_rate),
         weekly_rate: Number(classForm.weekly_rate),
       });
+      setModelForm((current) => ({ ...current, class_id: created.class_id }));
       setClassForm({ class_name: "", daily_rate: "", weekly_rate: "" });
     }, "Car class created.");
   }
