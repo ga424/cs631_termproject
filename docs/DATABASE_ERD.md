@@ -5,12 +5,17 @@
 ```mermaid
 erDiagram
     CUSTOMER ||--o{ RESERVATION : "makes"
+    CUSTOMER ||--o| CUSTOMER_ACCOUNT : "authenticates_as"
+    CUSTOMER ||--o{ RENTAL_LIFECYCLE_EVENT : "has_history"
     RESERVATION ||--|| RENTAL_AGREEMENT : "results_in"
+    RESERVATION ||--o{ RENTAL_LIFECYCLE_EVENT : "records"
     RENTAL_AGREEMENT }o--|| CAR : "rents"
+    RENTAL_AGREEMENT ||--o{ RENTAL_LIFECYCLE_EVENT : "records"
     MODEL }o--|| CAR_CLASS : "registered_as"
     CAR }o--|| MODEL : "belongs_to"
     CAR }o--|| LOCATION : "belongs_to"
     RESERVATION }o--|| LOCATION : "pickup_at"
+    RESERVATION }o--o| LOCATION : "returns_to"
     RESERVATION }o--|| CAR_CLASS : "reserves"
 
     LOCATION {
@@ -37,6 +42,17 @@ erDiagram
         string credit_card_number
         int exp_month
         int exp_year
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    CUSTOMER_ACCOUNT {
+        uuid account_id PK
+        uuid customer_id FK "UK"
+        string username UK
+        string password_hash
+        boolean is_active
+        timestamp last_login_at
         timestamp created_at
         timestamp updated_at
     }
@@ -72,12 +88,26 @@ erDiagram
         uuid reservation_id PK
         uuid customer_id FK
         uuid location_id FK
+        uuid return_location_id FK
         uuid class_id FK
         timestamp pickup_date_time
         timestamp return_date_time_requested
         string reservation_status
         timestamp created_at
         timestamp updated_at
+    }
+
+    RENTAL_LIFECYCLE_EVENT {
+        uuid event_id PK
+        uuid reservation_id FK
+        uuid contract_no FK
+        uuid customer_id FK
+        string event_type
+        string actor_role
+        string actor_username
+        timestamp event_timestamp
+        text notes
+        timestamp created_at
     }
 
     RENTAL_AGREEMENT {
@@ -102,21 +132,26 @@ erDiagram
 |-------|---------|-------------|-----------------|
 | **LOCATION** | Branch/rental office locations | `location_id` (UUID) | Unique combination of street, city, state, zip |
 | **CUSTOMER** | Customer profiles with license & payment info | `customer_id` (UUID) | Unique `license_number`, indexed for lookup performance |
+| **CUSTOMER_ACCOUNT** | Customer login identity linked to one customer | `account_id` (UUID) | Unique `customer_id`, unique normalized `username`, active login flag |
 | **CAR_CLASS** | Vehicle categories with rate cards | `class_id` (UUID) | Unique `class_name` (Economy, Compact, Mid-size, etc.) |
 | **MODEL** | Specific vehicle models (make, model, year) | `model_name` (String) | Composite: Make + Model + Year, FK to CAR_CLASS |
 | **CAR** | Individual vehicles in fleet | `vin` (String) | Unique per vehicle, FK to LOCATION and MODEL |
-| **RESERVATION** | Pre-bookings by customers | `reservation_id` (UUID) | One reservation per customer per date range |
+| **RESERVATION** | Pre-bookings by customers | `reservation_id` (UUID) | Pickup location, optional different return location, requested class/date range |
 | **RENTAL_AGREEMENT** | Actual rental contracts | `contract_no` (UUID) | Unique FK to RESERVATION; one rental per reservation |
+| **RENTAL_LIFECYCLE_EVENT** | Durable trip audit history | `event_id` (UUID) | Reservation event type, actor role/username, timestamp, optional contract |
 
 ### Key Relationships
 
 - **LOCATION** ↔ **CAR**: One location has many cars (stored at that location)
 - **LOCATION** ↔ **RESERVATION**: One location services many reservations (pickup location)
 - **CUSTOMER** ↔ **RESERVATION**: One customer makes many reservations
+- **CUSTOMER** ↔ **CUSTOMER_ACCOUNT**: One customer has at most one login account
+- **CUSTOMER** ↔ **RENTAL_LIFECYCLE_EVENT**: One customer has many lifecycle audit events
 - **CAR_CLASS** ↔ **MODEL**: One car class has many models (e.g., "Economy" → "Toyota Corolla")
 - **CAR_CLASS** ↔ **RESERVATION**: One class reserved many times
 - **MODEL** ↔ **CAR**: One model defines many individual cars
-- **RESERVATION** → **RENTAL_AGREEMENT**: One-to-one (each confirmed reservation becomes a rental contract)
+- **RESERVATION** → **RENTAL_AGREEMENT**: One-to-zero-or-one (active/canceled/no-show reservations may not have a rental contract)
+- **RESERVATION** → **RENTAL_LIFECYCLE_EVENT**: One reservation has many lifecycle events
 - **CAR** → **RENTAL_AGREEMENT**: One car can have multiple rental agreements over time
 
 ### Data Types
@@ -147,8 +182,11 @@ All tables include:
 
 ### Business Rules
 
-1. **Availability Check**: A car at a location is available if not currently in a RENTAL_AGREEMENT
-2. **Reservation Lifecycle**: RESERVATION.status → "active" → "fulfilled" (converted to RENTAL_AGREEMENT) or "cancelled"
-3. **Pricing**: Cost calculated using CAR_CLASS daily/weekly rates and stay duration
-4. **Odometer Tracking**: start_odometer_reading vs end_odometer_reading determines mileage for charges
-5. **Payment Info**: Stored on CUSTOMER to simplify recurring rentals
+1. **Availability Check**: A car at a location is available if it is not in an open rental agreement.
+2. **Agent Assignment**: Pickup assignment requires a car whose location matches the reservation pickup location and whose model belongs to the requested class.
+3. **Reservation Lifecycle**: `ACTIVE` reservations may become `FULFILLED`, `CANCELED`, or `NO_SHOW`; an open rental is active until the rental agreement has an end datetime.
+4. **Pricing**: Cost is calculated using CAR_CLASS daily/weekly rates and rental duration unless an authorized closeout override is provided.
+5. **Odometer Tracking**: start odometer is derived from the car record at pickup; end odometer is captured at return and updates the car record.
+6. **Customer Ownership**: Customer JWTs can access only their own `/customer-portal/me` summary and booking data.
+7. **Audit Trail**: Lifecycle events store who did what and when for reserved, canceled, no-show, picked-up, opened, returned, and billed steps.
+8. **Payment Info**: Stored on CUSTOMER to simplify recurring rentals in the coursework/demo model.

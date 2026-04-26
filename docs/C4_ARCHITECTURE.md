@@ -9,7 +9,9 @@ C4Context
     title System Context - Rental Car Management System
     
     Person(customer, "Customer", "A person who rents vehicles")
-    Person(admin, "Administrator", "Manages locations, vehicles, and reservations")
+    Person(agent, "Service Agent", "Creates reservations, assigns vehicles, opens rentals, handles returns")
+    Person(manager, "Branch Manager", "Monitors branch KPIs, exceptions, and utilization")
+    Person(admin, "Administrator", "Manages locations, vehicles, pricing, and reservations")
     
     System(rentalSystem, "Rental Car Management System", "Provides REST API for managing vehicle rentals, reservations, and locations")
     
@@ -19,7 +21,9 @@ C4Context
     SystemDb(database, "PostgreSQL Database", "Stores locations, customers, vehicles, reservations, and rental agreements")
     
     BiRel(customer, rentalSystem, "Uses to make reservations and rentals")
-    BiRel(admin, rentalSystem, "Uses to manage inventory and reservations")
+    BiRel(agent, rentalSystem, "Uses to run branch rental operations")
+    BiRel(manager, rentalSystem, "Uses to monitor operations")
+    BiRel(admin, rentalSystem, "Uses to manage inventory, pricing, and reservations")
     Rel(rentalSystem, database, "Reads/Writes data")
     Rel(rentalSystem, paymentGateway, "Processes payments")
     Rel(rentalSystem, emailService, "Sends notifications")
@@ -34,12 +38,14 @@ C4Container
     title Container Diagram - Rental Car Management System
     
     Person(customer, "Customer", "A person who rents vehicles")
+    Person(agent, "Service Agent", "Runs branch operations")
+    Person(manager, "Branch Manager", "Monitors branch operations")
     Person(admin, "Administrator", "Manages the system")
     
     System_Boundary(c1, "Rental Car Management System") {
-        Container(spa, "Web Browser", "React/Vue", "Provides user interface for customers and admins")
-        Container(api, "REST API", "FastAPI", "Provides API endpoints for managing reservations, vehicles, locations, and rentals")
-        Container(auth, "Authentication Service", "JWT Tokens", "Handles user authentication and authorization")
+        Container(spa, "Web Browser", "React + Vite", "Provides role-based UI for customers, agents, managers, and admins")
+        Container(api, "REST API", "FastAPI", "Provides API endpoints for accounts, reservations, vehicles, locations, rentals, dashboards, and customer portal")
+        Container(auth, "Authentication Service", "JWT Tokens", "Handles staff demo authentication and DB-backed customer authentication")
         ContainerDb(db, "PostgreSQL Database", "PostgreSQL", "Stores locations, customers, vehicles, reservations, and rental agreements")
     }
     
@@ -47,6 +53,8 @@ C4Container
     Container_Ext(paymentSvc, "Payment Gateway", "Stripe/PayPal", "Processes credit card transactions")
     
     Rel(customer, spa, "Uses")
+    Rel(agent, spa, "Uses")
+    Rel(manager, spa, "Uses")
     Rel(admin, spa, "Uses")
     Rel(spa, api, "Makes API calls", "HTTPS/REST")
     Rel(api, auth, "Validates tokens")
@@ -63,14 +71,14 @@ Shows the major components within the FastAPI REST API.
 C4Component
     title Component Diagram - REST API Service
     
-    Container(spa, "Web Browser", "React/Vue")
+    Container(spa, "Web Browser", "React + Vite")
     ContainerDb(db, "PostgreSQL")
     
     System_Boundary(api, "REST API - FastAPI") {
-        Component(router, "Route Handlers", "locations, customers, vehicles, reservations, rentals")
+        Component(router, "Route Handlers", "auth, customer portal, dashboard, locations, customers, vehicles, reservations, rentals")
         Component(schemas, "Request/Response Schemas", "Pydantic models for validation")
         Component(models, "Data Models", "SQLAlchemy ORM models")
-        Component(service, "Business Logic", "Validation, pricing, availability checks")
+        Component(service, "Business Logic", "Role checks, validation, pricing, availability, odometer, lifecycle events")
         Component(dbConn, "Database Connection", "SQLAlchemy session management")
         Component(config, "Configuration", "Environment settings and secrets")
     }

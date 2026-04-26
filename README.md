@@ -130,13 +130,14 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
    ```
    This will populate the database with realistic test data including:
    - 5 rental locations
-   - 6 car classes (Economy, Compact, Mid-size, Full-size, SUV, Luxury)
-   - 8 vehicle models
-   - 10 individual vehicles (cars/SUVs)
+   - Core classes plus a larger rental-market catalog with available and out-of-stock examples
+   - Physical fleet coverage across branches/classes so agent pickup assignment has matching cars
    - 5 sample customers
    - 5 DB-backed seeded customer login accounts
+   - inactive no-booking customer accounts for account-state demos
    - 5 reservations
    - 3 rental agreements
+   - rental lifecycle audit events with actor, timestamp, reservation, contract, and notes
 
 ### Testing the API
 
@@ -247,10 +248,11 @@ Authorization: Bearer {access_token}
 {
   "reservation_id": "{reservation_uuid}",
   "vin": "WBADT43452G942186",
-  "rental_start_date_time": "2026-04-15T10:00:00",
-  "start_odometer_reading": 15000
+  "rental_start_date_time": "2026-04-15T10:00:00"
 }
 ```
+
+The pickup odometer is derived by the API from the selected car's current odometer. If a client sends a stale or mismatched pickup odometer, the API rejects it. At return, submit only the new end odometer and optional actual cost override.
 
 ### Using cURL
 
@@ -319,6 +321,9 @@ curl http://localhost:8000/api/v1
 # Build the frontend locally
 cd frontend && npm run build
 
+# Run strict TypeScript checks locally
+cd frontend && npm run typecheck
+
 # Run local backend tests without writing coverage.xml
 cd backend && python3 -m pytest --no-cov
 
@@ -353,7 +358,7 @@ http://localhost:8000/api/v1
 - `GET /customer-portal/catalog`
 - `GET /customer-portal/me`
 - `POST /customer-portal/bookings`
-- `GET /customer-portal/summary/{customer_id}`
+- `GET /customer-portal/summary/{customer_id}` for staff/customer-owned lookup compatibility
 - `GET /dashboard/overview`
 
 ## CI/CD And Coverage
@@ -395,6 +400,7 @@ Frontend checks:
 ```bash
 cd frontend
 npm ci
+npm run typecheck
 npm run build
 npm run test:e2e:install
 npm run test:e2e
@@ -420,13 +426,17 @@ The database supports the full rental lifecycle across these primary entities:
 - **customers**: Customer identity, address, driver license, and payment data
 - **customer_account**: DB-backed customer login linked 1:1 to a customer row
 - **reservations**: Pickup/return requests by customer, class, and location
-- **rental_agreements**: Active and completed contracts tied to a reservation and VIN
+- **rental_agreements**: Open and returned/billed contracts tied to a reservation and VIN
+- **rental_lifecycle_event**: durable audit trail of who reserved, canceled, picked up, opened, returned, and billed each trip
 
 ### Liquibase Migrations
 Database schema is managed through Liquibase XML changesets:
 - `01-init-schema.xml`: Creates extensions, functions, and triggers
 - `02-create-tables.xml`: Defines table structures with constraints and indexes
 - `03-add-business-constraints.xml`: Adds lifecycle, pricing, and data validation constraints
+- `04-create-customer-accounts.xml`: Adds customer login accounts linked 1:1 to customers
+- `05-add-rental-lifecycle-events.xml`: Adds reservation `FULFILLED` status and lifecycle audit events
+- `06-add-reservation-return-location.xml`: Adds separate return location support
 
 ### Running Migrations
 Migrations run automatically on service startup via `liquibase` container. To run manually:
@@ -595,11 +605,16 @@ docker-compose logs liquibase
 node --version
 cd frontend
 npm ci
+npm run typecheck
 npm run test:e2e:install
 npm run build
 ```
 
 Use Node.js 20 or newer. Node 19 is not supported by the current Vite/Playwright toolchain.
+
+### Agent pickup vehicle dropdown is empty
+
+The pickup form intentionally filters vehicles to cars that are not in an open rental and match both the reservation pickup branch and requested car class. Run `./start.sh seed` after pulling the latest seed script; the demo seed now ensures available branch/class fleet coverage for assignment flows while still preserving out-of-stock catalog examples for the customer booking experience.
 
 ## Next Steps
 

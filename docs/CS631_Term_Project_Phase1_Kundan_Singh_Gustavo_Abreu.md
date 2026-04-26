@@ -4,7 +4,20 @@
 **Phase:** I - Conceptual Design  
 **System:** RentaCar Database System  
 **Created:** 22 Mar 2026  
-**Last updated:** 28 Mar 2026
+**Last updated:** 25 Apr 2026
+
+## Implementation Addendum
+
+The implemented system extends the original conceptual model with operational hardening needed for a working demo:
+
+- `CUSTOMER_ACCOUNT` stores DB-backed customer login credentials in a 1:1 relationship with `CUSTOMER`.
+- `RESERVATION.return_location_id` supports return-to-different-location booking flows.
+- `RESERVATION.reservation_status = FULFILLED` means the reservation successfully opened a rental agreement; it does not mean the vehicle has been returned.
+- `RENTAL_LIFECYCLE_EVENT` stores a durable audit trail with event type, actor role, actor username, timestamp, reservation, optional contract, and notes.
+- Pickup odometer is derived from `CAR.current_odometer_reading`; agents enter only the return/end odometer at closeout.
+- Demo seed data includes active customer accounts, inactive no-booking customer accounts, current/historical trips, lifecycle events, out-of-stock catalog classes, and branch/class vehicle coverage for agent assignment.
+
+These additions preserve the course requirements while making the customer portal, agent pickup/return workflow, manager dashboard, and admin fleet controls demonstrable end to end.
 
 ## System Overview
 The purpose of the RentaCar database system is to support the operational activities of a car rental company, including managing customers, vehicles, reservations, rental agreements, and billing. The system tracks vehicle inventory by location, allows customers to make reservations, converts reservations into rental agreements, and computes rental charges based on car class rates.
@@ -167,9 +180,13 @@ CAR(VIN, CurrentOdometerReading, LocationID, ClassID, ModelName)
 
 MODEL(ModelName, MakeName, ModelYear, ClassID)
 
-RESERVATION(ReservationID, CustomerID, LocationID, ClassID, PickupDateTime, ReturnDateTimeRequested, ReservationStatus)
+CUSTOMER_ACCOUNT(AccountID, CustomerID, Username, PasswordHash, IsActive, LastLoginAt)
+
+RESERVATION(ReservationID, CustomerID, LocationID, ReturnLocationID, ClassID, PickupDateTime, ReturnDateTimeRequested, ReservationStatus)
 
 RENTAL_AGREEMENT(ContractNo, ReservationID, VIN, RentalStartDateTime, RentalEndDateTime, StartOdometerReading, EndOdometerReading, ActualCost)
+
+RENTAL_LIFECYCLE_EVENT(EventID, ReservationID, ContractNo, CustomerID, EventType, ActorRole, ActorUsername, EventTimestamp, Notes)
 - CUSTOMER( CustomerID PK, FirstName, LastName, Street, City, State, Zip, LicenseNumber, LicenseState, CreditCardType, CreditCardNumber, ExpMonth, ExpYear ) 
 - LOCATION( LocationID PK, Street, City, State, Zip )  
 - CAR_CLASS( ClassID PK, ClassName, DailyRate, WeeklyRate )  
@@ -199,4 +216,3 @@ The following assumptions were made during the design process:
 - Status is added to track cancellations/no-shows.
 - We have assumed that Car Model Name is a primary key and exists only in a make.
 - We have not considered a more practical operational and conceptual data model that would enable other parts not mentioned in the business requirements to be addressed, for example, returning the car causes the representative to bring the contract to a natural ending of the rental agreement, inspections, etc. We have also not included the additional temporal nature of rates as modeled in the future enhancement version below, where we can see these updated and applicable for future agreements where the rate might have changed
-

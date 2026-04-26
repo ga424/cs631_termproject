@@ -7,16 +7,16 @@ This document maps user workflows directly to the official CS631 RentACar requir
 - **Service Agent:** signs in with JWT credentials and handles customer intake, phone reservations, walk-ins, pickup rental agreements, cancellation/no-show updates, returns, and billing.
 - **Branch Manager:** signs in with JWT credentials and reviews operational dashboard metrics for fleet availability, active rentals, overdue rentals, upcoming pickups, utilization, and rates.
 - **Administrator:** signs in with JWT credentials and can perform all service-agent and manager workflows plus inventory/pricing administration for locations, car classes, models, and cars.
-- **Customer:** signs in with JWT credentials and uses the self-service mobile portal to browse the catalog, place a reservation, and monitor reservation/rental status.
+- **Customer:** signs in with a DB-backed customer account linked 1:1 to a customer row, then uses the self-service mobile portal to browse the catalog, place a reservation, and monitor reservation/rental status.
 
 ### Demo Credentials
 
-- Customer: `customer` / `customer123`
+- Customer: select an active seeded customer on the landing page or use `john.doe`, `jane.smith`, `robert.johnson`, `emily.williams`, or `michael.brown` with password `customer123`
 - Agent: `agent` / `agent123`
 - Manager: `manager` / `manager123`
 - Admin: `admin` / `admin123`
 
-All `/api/v1/*` operational resources require `Authorization: Bearer <jwt>` except `/api/v1/auth/login`, `/`, `/health`, `/docs`, and `/api/v1`.
+Inactive no-booking customer accounts are visible for demo context but cannot log in. All `/api/v1/*` operational resources require `Authorization: Bearer <jwt>` except `/api/v1/auth/login`, `/api/v1/auth/customer-signup`, `/api/v1/auth/demo-customers`, `/`, `/health`, `/docs`, and `/api/v1`.
 
 ## Journey Views (Diagrams)
 
@@ -52,7 +52,7 @@ sequenceDiagram
 	Rep->>API: Create/lookup customer
 	API->>DB: Insert/select customer
 	DB-->>API: Customer record
-	Rep->>API: Submit reservation details
+	Rep->>API: Submit pickup location/time, return location/time, and requested class
 	API->>DB: Insert reservation (ACTIVE)
 	DB-->>API: Reservation ID
 	API-->>Rep: Reservation confirmation + rates
@@ -81,12 +81,12 @@ stateDiagram-v2
 ### Requirement Mapping
 - A customer makes a reservation for a **car class** at a **specific location**.
 - The same customer may make multiple reservations over time.
-- Reservation captures desired pickup/return date-time period.
+- Reservation captures pickup location/date/time, return location/date/time, and desired class.
 
 ### Steps
 1. Service representative captures customer identity and address.
 2. Representative captures rental period and desired class.
-3. System stores reservation in `reservation` with status `ACTIVE`.
+3. System stores reservation in `reservation` with status `ACTIVE` and keeps return location separate from pickup location.
 4. Customer is informed of daily/weekly class rates.
 
 ### Core Data
@@ -124,7 +124,9 @@ stateDiagram-v2
 ### Steps
 1. Representative retrieves reservation.
 2. Specific vehicle (`vin`) is assigned.
-3. Rental agreement is created and customer receives copy/keys.
+3. The pickup odometer is confirmed from the selected car's stored `current_odometer_reading`.
+4. Rental agreement is created, reservation becomes `FULFILLED`, and customer receives copy/keys.
+5. Lifecycle audit events record who picked up and opened the rental, and when.
 
 ### Core Data
 - `reservation`, `car`, `rental_agreement`
@@ -159,9 +161,11 @@ stateDiagram-v2
 
 ### Steps
 1. Representative opens rental agreement.
-2. End date-time and end odometer are captured.
+2. Start odometer is displayed from the contract; only the new return/end odometer is entered.
 3. Actual cost is calculated and stored.
 4. Billing is posted to customer credit card.
+5. Car `current_odometer_reading` is updated to the submitted return odometer.
+6. Lifecycle audit events record return and billing actor/timestamp details.
 
 ### Core Data
 - `rental_agreement`, `reservation`, `car_class`, `customer`
@@ -182,6 +186,7 @@ stateDiagram-v2
 2. Manage class rates.
 3. Manage model catalog.
 4. Register/update cars and assigned location.
+5. Seed/demo data keeps at least two assignable vehicles per branch and bookable class, so agents can complete pickup assignments while the customer catalog can still show intentionally out-of-stock classes.
 
 ### Core Data
 - `location`, `car_class`, `model`, `car`
@@ -191,6 +196,31 @@ stateDiagram-v2
 - `/api/v1/car-classes`
 - `/api/v1/models`
 - `/api/v1/cars`
+
+## Journey 7: Customer Self-Service Account And Trip History
+
+### Requirement Mapping
+- Customers can have login credentials tied to their customer identity.
+- Customers can reserve a car class without being able to read or mutate another customer's data.
+- The portal shows current trips and historical trips using reservation, rental agreement, billing, odometer, and lifecycle audit facts.
+
+### Steps
+1. Customer selects a seeded active customer account or registers a new account.
+2. Customer signs in through the normal JWT login flow.
+3. Customer opens My Trip, which defaults to trip history when reservations/rentals exist.
+4. Customer opens the embedded reservation journey to select pickup/return location and time plus vehicle class.
+5. Customer tracks lifecycle events: reserved, picked up, rental opened, returned, billed, canceled, or no-show.
+
+### Core Data
+- `customer`, `customer_account`, `reservation`, `rental_agreement`, `rental_lifecycle_event`
+
+### API Touchpoints
+- `POST /api/v1/auth/customer-signup`
+- `GET /api/v1/auth/demo-customers`
+- `POST /api/v1/auth/login`
+- `GET /api/v1/customer-portal/catalog`
+- `GET /api/v1/customer-portal/me`
+- `POST /api/v1/customer-portal/bookings`
 
 ## Traceability To Project Phases
 

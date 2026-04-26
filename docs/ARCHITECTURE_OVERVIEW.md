@@ -41,7 +41,7 @@ The C4 Model provides a hierarchical view of the system architecture at differen
 
 Comprehensive Entity Relationship Diagram (ERD) showing the complete database schema:
 
-#### Tables (7 total):
+#### Tables (9 total):
 
 1. **LOCATION** - Branch/rental office locations
    - Fields: location_id (PK, UUID), address, city, state, zip
@@ -49,42 +49,54 @@ Comprehensive Entity Relationship Diagram (ERD) showing the complete database sc
 
 2. **CUSTOMER** - Customer profiles
    - Fields: customer_id (PK, UUID), name, address, license info, payment info
-   - Relationships: Makes many reservations
+   - Relationships: Makes many reservations, owns one optional customer login account
 
-3. **CAR_CLASS** - Vehicle categories (Economy, Compact, Mid-size, etc.)
+3. **CUSTOMER_ACCOUNT** - Customer authentication accounts
+   - Fields: account_id (PK, UUID), customer_id (unique FK), username, password_hash, is_active, last_login_at
+   - Relationships: Linked 1:1 to a customer profile
+
+4. **CAR_CLASS** - Vehicle categories (Economy, Compact, Mid-size, etc.)
    - Fields: class_id (PK, UUID), class_name, daily_rate, weekly_rate
    - Relationships: Classifies many models, used in many reservations
 
-4. **MODEL** - Specific vehicle models (Make/Model/Year)
+5. **MODEL** - Specific vehicle models (Make/Model/Year)
    - Fields: model_name (PK, String), make_name, model_year, class_id (FK)
    - Relationships: Belongs to one car class, defines many cars
 
-5. **CAR** - Individual vehicles in fleet
+6. **CAR** - Individual vehicles in fleet
    - Fields: vin (PK, String), odometer_reading, location_id (FK), model_name (FK)
    - Relationships: Located at one location, follows one model, used in many rentals
 
-6. **RESERVATION** - Pre-bookings by customers
-   - Fields: reservation_id (PK, UUID), customer_id (FK), location_id (FK), class_id (FK), dates, status
-   - Relationships: Made by one customer, at one location, for one car class, creates one rental
+7. **RESERVATION** - Pre-bookings by customers
+   - Fields: reservation_id (PK, UUID), customer_id (FK), pickup location, return location, class_id (FK), dates, status
+   - Relationships: Made by one customer, at one pickup location, optionally returned to another location, for one car class, creates at most one rental
 
-7. **RENTAL_AGREEMENT** - Actual rental contracts
+8. **RENTAL_AGREEMENT** - Actual rental contracts
    - Fields: contract_no (PK, UUID), reservation_id (FK), vin (FK), dates, odometer readings, cost
    - Relationships: Fulfills one reservation, uses one car
+
+9. **RENTAL_LIFECYCLE_EVENT** - Trip audit trail
+   - Fields: event_id (PK, UUID), reservation_id, contract_no, customer_id, event_type, actor_role, actor_username, event_timestamp, notes
+   - Relationships: Records who did what and when for reservation, pickup, rental, return, and billing events
 
 #### Key Relationships:
 
 - One customer can make many reservations
+- One customer can have one DB-backed customer account
 - One location can have many cars and service many reservations
 - One car class can apply to many models and many reservations
 - One model defines many individual cars
 - One reservation creates at most one rental agreement
 - One car can be used in many rental agreements over time
+- One reservation can have many lifecycle audit events
 
 #### Business Rules:
 
 - Vehicle availability: Car is available if not currently in active rental
+- Agent vehicle assignment: car must match reservation pickup branch and requested class
 - Pricing: Calculated from car class rates × rental duration
-- Odometer tracking: Records mileage for usage-based charges
+- Odometer tracking: Pickup odometer is derived from the selected car; return odometer is captured at closeout
+- Auditability: Lifecycle events store actor, timestamp, reservation, optional contract, and notes
 - Payment: Stored on customer for recurring rental convenience
 
 **Validation Status**: ✅ ERD validated and rendering properly
@@ -100,6 +112,9 @@ User journey views that connect course requirements to concrete workflows and AP
 - Rental return and closeout
 - Cancellation / no-show flows
 - Fleet and pricing administration flows
+- DB-backed customer signup/login and customer-owned portal data
+- Rental lifecycle audit trail views
+- Strict TypeScript frontend checks plus mocked and live Playwright persona tests
 
 These journeys are intended to support:
 - Phase I traceability from business rules to entities/relationships
@@ -151,6 +166,7 @@ All diagrams are written in Mermaid diagram markup and can be:
   - `app/db/`: Database connection management
 - **ERD**: Directly derived from `app/models/models.py` SQLAlchemy ORM definitions
 - **Deployment**: Reflects actual CI/CD in `.github/workflows/ci-cd.yml` and Docker setup
+- **Seed data**: Provides customer accounts, active/inactive demo accounts, lifecycle events, and branch/class vehicle coverage so persona demos can complete end-to-end
 
 ---
 
