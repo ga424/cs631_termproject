@@ -1,4 +1,5 @@
 import { SectionCard } from "../../components/ui";
+import type * as React from "react";
 import type { Car } from "../../lib/types";
 import type { StaffData } from "../../hooks/useStaffData";
 
@@ -28,7 +29,7 @@ export function PickupTab({
   return (
     <SectionCard title="Pickup Assignment" subtitle="Assign a compatible VIN and start the rental contract.">
       <form className="stack-form" onSubmit={createRental}>
-        <select value={rentalForm.reservation_id} onChange={(e) => setRentalForm((c) => ({ ...c, reservation_id: e.target.value }))} required>
+        <select aria-label="Rental reservation" value={rentalForm.reservation_id} onChange={(e) => setRentalForm((c) => ({ ...c, reservation_id: e.target.value }))} required>
           <option value="">Reservation</option>
           {staff.unassignedActiveReservations.map((item) => (
             <option key={item.reservation_id} value={item.reservation_id}>
@@ -36,7 +37,7 @@ export function PickupTab({
             </option>
           ))}
         </select>
-        <select value={rentalForm.vin} onChange={(e) => setRentalForm((c) => ({ ...c, vin: e.target.value }))} required>
+        <select aria-label="Assignable vehicle" value={rentalForm.vin} onChange={(e) => setRentalForm((c) => ({ ...c, vin: e.target.value }))} required>
           <option value="">Assignable vehicle</option>
           {assignableCars.map((car) => (
             <option key={car.vin} value={car.vin}>{car.vin} · {car.model_name}</option>

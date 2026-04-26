@@ -185,7 +185,7 @@ select {
 
 .login-persona.active {
   border-color: var(--accent);
-  outline: 2px solid color-mix(in srgb, var(--accent) 24%, transparent);
+  outline: 2px solid rgba(0, 109, 91, 0.24);
 }
 
 .persona-icon {
@@ -489,7 +489,7 @@ select {
 .role-hero {
   color: #fff;
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--role-start) 90%, #000), var(--role-end)),
+    linear-gradient(135deg, var(--role-start), var(--role-end)),
     var(--surface);
 }
 
@@ -706,7 +706,7 @@ select {
 
 .vehicle-option-card.unavailable {
   color: var(--muted);
-  background: color-mix(in srgb, var(--surface-soft) 78%, #fff);
+  background: var(--surface-soft);
   opacity: 0.72;
 }
 
@@ -994,7 +994,7 @@ select {
 
 .journey-card,
 .trip-board {
-  border-color: color-mix(in srgb, var(--accent) 24%, var(--line));
+  border-color: var(--line);
 }
 
 .drawer-backdrop {
@@ -1056,7 +1056,7 @@ select {
 
 .profile-section.accent {
   background: var(--accent-soft);
-  border-color: color-mix(in srgb, var(--accent) 22%, var(--line));
+  border-color: var(--line);
 }
 
 .profile-section dl {
@@ -1093,6 +1093,7 @@ select {
   border: 1px solid rgba(221, 213, 200, 0.9);
   border-radius: 22px;
   box-shadow: var(--shadow);
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
 }
 

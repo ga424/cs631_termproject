@@ -1,5 +1,5 @@
 import { getStoredAuthSession } from "./storage";
-import type { ZodType } from "zod";
+import type { ZodTypeAny } from "zod";
 import {
   authSessionSchema,
   carSchema,
@@ -46,7 +46,7 @@ type RequestOptions = RequestInit & {
   skipAuth?: boolean;
 };
 
-async function apiRequest<T>(path: string, options: RequestOptions = {}, schema?: ZodType<T>): Promise<T> {
+async function apiRequest<T>(path: string, options: RequestOptions = {}, schema?: ZodTypeAny): Promise<T> {
   const { skipAuth, ...fetchOptions } = options;
   const token = skipAuth ? "" : getStoredAuthSession()?.access_token;
   const headers = {
@@ -85,7 +85,7 @@ async function apiRequest<T>(path: string, options: RequestOptions = {}, schema?
     throw new Error(`Invalid API response for ${path}`);
   }
 
-  return parsed.data;
+  return parsed.data as T;
 }
 
 export const api = {

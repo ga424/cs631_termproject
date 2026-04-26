@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type * as React from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useCustomerPortal } from "../../hooks/useCustomerPortal";
 import { MobileLayout } from "../../components/MobileLayout";

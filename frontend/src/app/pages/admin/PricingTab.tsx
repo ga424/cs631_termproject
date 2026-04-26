@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type * as React from "react";
 import { formatCurrency } from "../../lib/api";
 import { QueueList, SectionCard } from "../../components/ui";
 import type { StaffData } from "../../hooks/useStaffData";
@@ -45,7 +46,7 @@ export function PricingTab({
             <input placeholder="Model name" value={modelForm.model_name} onChange={(e) => setModelForm((c) => ({ ...c, model_name: e.target.value }))} required />
             <input placeholder="Make" value={modelForm.make_name} onChange={(e) => setModelForm((c) => ({ ...c, make_name: e.target.value }))} required />
             <input type="number" min="1980" placeholder="Model year" value={modelForm.model_year} onChange={(e) => setModelForm((c) => ({ ...c, model_year: e.target.value }))} required />
-            <select value={modelForm.class_id} onChange={(e) => setModelForm((c) => ({ ...c, class_id: e.target.value }))} required>
+            <select aria-label="Model vehicle class" value={modelForm.class_id} onChange={(e) => setModelForm((c) => ({ ...c, class_id: e.target.value }))} required>
               <option value="">Class</option>
               {staff.carClasses.map((item) => <option key={item.class_id} value={item.class_id}>{item.class_name}</option>)}
             </select>

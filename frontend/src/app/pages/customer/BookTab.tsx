@@ -1,4 +1,5 @@
 import { formatCurrency } from "../../lib/api";
+import type * as React from "react";
 import type { CustomerPortalCatalog } from "../../lib/types";
 
 export const CUSTOMER_BOOKING_DEFAULT_FORM = {
@@ -85,7 +86,7 @@ export function BookTab({
       <fieldset className="form-fieldset">
         <legend>Trip Details</legend>
         <div className="field-grid">
-          <select value={form.location_id} onChange={(e) => onChange({ ...form, location_id: e.target.value })} required>
+          <select aria-label="Pick-up location" value={form.location_id} onChange={(e) => onChange({ ...form, location_id: e.target.value })} required>
             <option value="">Pick-up location</option>
             {catalog.locations.map((item) => (
               <option key={item.location_id} value={item.location_id}>{item.city}, {item.state}</option>
@@ -104,7 +105,7 @@ export function BookTab({
             Return to a different location
           </label>
           {form.return_to_different_location ? (
-            <select value={form.return_location_id} onChange={(e) => onChange({ ...form, return_location_id: e.target.value })} required>
+            <select aria-label="Drop-off location" value={form.return_location_id} onChange={(e) => onChange({ ...form, return_location_id: e.target.value })} required>
               <option value="">Drop-off location</option>
               {catalog.locations.map((item) => (
                 <option key={item.location_id} value={item.location_id}>{item.city}, {item.state}</option>

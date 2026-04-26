@@ -1,4 +1,5 @@
 import { SectionCard } from "../../components/ui";
+import type * as React from "react";
 import type { StaffData } from "../../hooks/useStaffData";
 
 export const DEFAULT_RETURN_FORM = {
@@ -34,7 +35,7 @@ export function ReturnTab({
     <>
       <SectionCard title="Return And Billing" subtitle="Close a contract and finalize billing from one flow.">
         <form className="stack-form" onSubmit={closeRental}>
-          <select value={returnForm.contract_no} onChange={(e) => setReturnForm((c) => ({ ...c, contract_no: e.target.value }))} required>
+          <select aria-label="Open contract" value={returnForm.contract_no} onChange={(e) => setReturnForm((c) => ({ ...c, contract_no: e.target.value }))} required>
             <option value="">Open contract</option>
             {staff.openRentals.map((item) => <option key={item.contract_no} value={item.contract_no}>{item.vin} · {item.contract_no.slice(0, 8)}</option>)}
           </select>
@@ -57,7 +58,7 @@ export function ReturnTab({
 
       <SectionCard title="Cancellation / No Show" subtitle="Resolve reservation exceptions directly from the branch queue.">
         <form className="stack-form" onSubmit={updateStatus}>
-          <select value={statusForm.reservation_id} onChange={(e) => setStatusForm((c) => ({ ...c, reservation_id: e.target.value }))} required>
+          <select aria-label="Exception reservation" value={statusForm.reservation_id} onChange={(e) => setStatusForm((c) => ({ ...c, reservation_id: e.target.value }))} required>
             <option value="">Reservation</option>
             {staff.unassignedActiveReservations.map((item) => (
               <option key={item.reservation_id} value={item.reservation_id}>
@@ -65,7 +66,7 @@ export function ReturnTab({
               </option>
             ))}
           </select>
-          <select value={statusForm.reservation_status} onChange={(e) => setStatusForm((c) => ({ ...c, reservation_status: e.target.value }))}>
+          <select aria-label="Exception status" value={statusForm.reservation_status} onChange={(e) => setStatusForm((c) => ({ ...c, reservation_status: e.target.value }))}>
             <option value="CANCELED">Canceled</option>
             <option value="NO_SHOW">No show</option>
           </select>

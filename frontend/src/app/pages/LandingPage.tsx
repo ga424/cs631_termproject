@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type * as React from "react";
 import {
   MilanBrandHeader,
   PersonaSelector,

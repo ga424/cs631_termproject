@@ -4,7 +4,7 @@
     
     {
       "name": "Attach FastAPI Container",
-      "type": "python",
+      "type": "debugpy",
       "request": "attach",
       "connect": {
         "host": "localhost",

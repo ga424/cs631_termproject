@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type * as React from "react";
 import type { Reservation } from "../../lib/types";
 import { SectionCard } from "../../components/ui";
 import type { StaffData } from "../../hooks/useStaffData";
@@ -83,15 +84,15 @@ export function IntakeTab({
           <button type="button" onClick={() => setOpenForm("reservation")}>Create Reservation</button>
         ) : (
           <form className="stack-form" onSubmit={async (event) => { await createReservation(event); setOpenForm(""); }}>
-            <select value={reservationForm.customer_id} onChange={(e) => setReservationForm((c) => ({ ...c, customer_id: e.target.value }))} required>
+            <select aria-label="Reservation customer" value={reservationForm.customer_id} onChange={(e) => setReservationForm((c) => ({ ...c, customer_id: e.target.value }))} required>
               <option value="">Customer</option>
               {staff.customers.map((item) => <option key={item.customer_id} value={item.customer_id}>{item.first_name} {item.last_name}</option>)}
             </select>
-            <select value={reservationForm.location_id} onChange={(e) => setReservationForm((c) => ({ ...c, location_id: e.target.value }))} required>
+            <select aria-label="Reservation pickup branch" value={reservationForm.location_id} onChange={(e) => setReservationForm((c) => ({ ...c, location_id: e.target.value }))} required>
               <option value="">Pickup branch</option>
               {staff.locations.map((item) => <option key={item.location_id} value={item.location_id}>{item.city}, {item.state}</option>)}
             </select>
-            <select value={reservationForm.class_id} onChange={(e) => setReservationForm((c) => ({ ...c, class_id: e.target.value }))} required>
+            <select aria-label="Reservation vehicle class" value={reservationForm.class_id} onChange={(e) => setReservationForm((c) => ({ ...c, class_id: e.target.value }))} required>
               <option value="">Vehicle class</option>
               {staff.carClasses.map((item) => <option key={item.class_id} value={item.class_id}>{item.class_name}</option>)}
             </select>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type * as React from "react";
 import { QueueList, SectionCard } from "../../components/ui";
 import type { StaffData } from "../../hooks/useStaffData";
 
@@ -48,11 +49,11 @@ export function FleetTab({
           <form className="stack-form" onSubmit={async (event) => { await createCar(event); setOpenForm(""); }}>
             <input placeholder="VIN" minLength={17} maxLength={17} value={carForm.vin} onChange={(e) => setCarForm((c) => ({ ...c, vin: e.target.value }))} required />
             <input type="number" min="0" placeholder="Current odometer" value={carForm.current_odometer_reading} onChange={(e) => setCarForm((c) => ({ ...c, current_odometer_reading: e.target.value }))} required />
-            <select value={carForm.location_id} onChange={(e) => setCarForm((c) => ({ ...c, location_id: e.target.value }))} required>
+            <select aria-label="Car branch location" value={carForm.location_id} onChange={(e) => setCarForm((c) => ({ ...c, location_id: e.target.value }))} required>
               <option value="">Location</option>
               {staff.locations.map((item) => <option key={item.location_id} value={item.location_id}>{item.city}, {item.state}</option>)}
             </select>
-            <select value={carForm.model_name} onChange={(e) => setCarForm((c) => ({ ...c, model_name: e.target.value }))} required>
+            <select aria-label="Car model" value={carForm.model_name} onChange={(e) => setCarForm((c) => ({ ...c, model_name: e.target.value }))} required>
               <option value="">Model</option>
               {staff.models.map((item) => <option key={item.model_name} value={item.model_name}>{item.make_name} {item.model_name}</option>)}
             </select>
