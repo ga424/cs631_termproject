@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     # App
     app_name: str = "Rental Car Management System"
     app_version: str = "0.1.0"
-    log_level: str = "INFO"
+    log_level: str = "DEBUG"
     log_json: bool = False
     jwt_secret_key: str = "dev-rentacar-secret-change-me"
     jwt_algorithm: str = "HS256"
