@@ -31,6 +31,60 @@ const testCustomer = {
   exp_year: 2028
 };
 
+const testLocation = {
+  location_id: "00000000-0000-0000-0000-000000000101",
+  street: "20 Market St",
+  city: "Newark",
+  state: "NJ",
+  zip: "07102"
+};
+
+const testClass = {
+  class_id: "00000000-0000-0000-0000-000000000201",
+  class_name: "Full-Size",
+  daily_rate: 32.67,
+  weekly_rate: 620.82
+};
+
+const testModel = {
+  model_name: "Camry",
+  make_name: "Toyota",
+  model_year: 2026,
+  class_id: testClass.class_id
+};
+
+const testCar = {
+  vin: "TESTVIN0000000001",
+  current_odometer_reading: 12450,
+  location_id: testLocation.location_id,
+  model_name: testModel.model_name
+};
+
+const testReservation = {
+  reservation_id: "00000000-0000-0000-0000-000000000301",
+  customer_id: testCustomer.customer_id,
+  location_id: testLocation.location_id,
+  return_location_id: testLocation.location_id,
+  class_id: testClass.class_id,
+  pickup_date_time: "2026-05-01T10:00:00",
+  return_date_time_requested: "2026-05-03T10:00:00",
+  reservation_status: "ACTIVE"
+};
+
+const testCustomerAccount = {
+  account_id: "00000000-0000-0000-0000-000000000011",
+  customer_id: testCustomer.customer_id,
+  username: "john.doe",
+  is_active: true,
+  last_login_at: null,
+  first_name: testCustomer.first_name,
+  last_name: testCustomer.last_name,
+  city: testCustomer.city,
+  state: testCustomer.state,
+  created_at: "2026-04-25T00:00:00",
+  updated_at: "2026-04-25T00:00:00"
+};
+
 async function signInAs(page, role, overrides = {}) {
   const catalogPayload = overrides.catalogPayload || {
     locations: [],
@@ -104,14 +158,46 @@ async function signInAs(page, role, overrides = {}) {
       }])
     });
   });
+  await page.route("**/api/v1/auth/customer-accounts", async (route) => {
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify([testCustomerAccount]) });
+  });
+  await page.route("**/api/v1/customers", async (route) => {
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify([testCustomer]) });
+  });
+  await page.route("**/api/v1/locations", async (route) => {
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify([testLocation]) });
+  });
+  await page.route("**/api/v1/car-classes", async (route) => {
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify([testClass]) });
+  });
+  await page.route("**/api/v1/models", async (route) => {
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify([testModel]) });
+  });
+  await page.route("**/api/v1/cars", async (route) => {
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify([testCar]) });
+  });
+  await page.route("**/api/v1/reservations", async (route) => {
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify([testReservation]) });
+  });
+  await page.route("**/api/v1/rental-agreements", async (route) => {
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify([]) });
+  });
   await page.route("**/api/v1/**", async (route) => {
     const url = route.request().url();
     if (
       url.includes("/api/v1/auth/login") ||
+      url.includes("/api/v1/auth/customer-accounts") ||
       url.includes("/api/v1/dashboard/overview") ||
       url.includes("/api/v1/customer-portal/catalog") ||
       url.includes("/api/v1/customer-portal/me") ||
-      url.includes("/api/v1/auth/demo-customers")
+      url.includes("/api/v1/auth/demo-customers") ||
+      url.includes("/api/v1/customers") ||
+      url.includes("/api/v1/locations") ||
+      url.includes("/api/v1/car-classes") ||
+      url.includes("/api/v1/models") ||
+      url.includes("/api/v1/cars") ||
+      url.includes("/api/v1/reservations") ||
+      url.includes("/api/v1/rental-agreements")
     ) {
       await route.fallback();
       return;
@@ -158,10 +244,43 @@ test("admin sees the mobile-first admin console with fleet and pricing tabs", as
 
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByRole("heading", { name: /rental admin console/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^customers$/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /^fleet$/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /^pricing$/i })).toBeVisible();
   await expect(page.getByText("Operational Health")).toBeVisible();
 });
+
+test("admin data grids organize customers reservations cars and locations", async ({ page }) => {
+  await signInAs(page, "admin");
+
+  await page.getByRole("button", { name: /^customers$/i }).click();
+  await expect(page.getByText("Registered Users")).toBeVisible();
+  await expect(page.locator(".admin-data-grid").first()).toBeVisible();
+  await expect(page.getByText("john.doe")).toBeVisible();
+  await expect(page.getByText("Demo")).toBeVisible();
+
+  await page.getByRole("button", { name: /^reservations$/i }).click();
+  await expect(page.getByText("Reservation List")).toBeVisible();
+  await expect(page.locator(".admin-data-grid").first()).toBeVisible();
+  await expect(page.getByText("ACTIVE")).toBeVisible();
+  await expect(page.getByText("Full-Size")).toBeVisible();
+
+  await page.getByRole("button", { name: /^fleet$/i }).click();
+  await expect(page.getByRole("heading", { name: "Locations", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Cars", exact: true })).toBeVisible();
+  await expect(page.getByText("Newark, NJ")).toBeVisible();
+  await expect(page.getByText("Toyota Camry (Full-Size)")).toBeVisible();
+});
+
+for (const role of ["customer", "agent", "manager"]) {
+  test(`${role} cannot open the admin console route`, async ({ page }) => {
+    await signInAs(page, role);
+
+    await page.goto("/admin");
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("heading", { name: /rental admin console/i })).toHaveCount(0);
+  });
+}
 
 test("customer sees a validation error when customer summary payload is malformed", async ({ page }) => {
   await signInAs(page, "customer", {

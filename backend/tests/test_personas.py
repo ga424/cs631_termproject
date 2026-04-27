@@ -272,6 +272,50 @@ def test_agent_and_manager_cannot_access_admin_inventory_actions():
         assert response.status_code == 403
 
 
+def test_non_admin_staff_cannot_use_admin_grid_mutations():
+    client = TestClient(app)
+
+    for username, password in [("agent", "agent123"), ("manager", "manager123")]:
+        headers = auth_headers(client, username=username, password=password)
+        responses = [
+            client.put(f"/api/v1/locations/{uuid4()}", json={"city": "Newark"}, headers=headers),
+            client.delete(f"/api/v1/locations/{uuid4()}", headers=headers),
+            client.put("/api/v1/cars/TESTVIN0000000001", json={"current_odometer_reading": 12500}, headers=headers),
+            client.delete("/api/v1/cars/TESTVIN0000000001", headers=headers),
+            client.put(f"/api/v1/car-classes/{uuid4()}", json={"daily_rate": 55}, headers=headers),
+            client.delete(f"/api/v1/car-classes/{uuid4()}", headers=headers),
+            client.put("/api/v1/models/TestModel", json={"make_name": "Test"}, headers=headers),
+            client.delete("/api/v1/models/TestModel", headers=headers),
+            client.put(f"/api/v1/auth/customer-accounts/{uuid4()}", json={"is_active": False}, headers=headers),
+            client.delete(f"/api/v1/auth/customer-accounts/{uuid4()}", headers=headers),
+        ]
+
+        assert all(response.status_code == 403 for response in responses)
+
+
+def test_customer_persona_cannot_read_staff_admin_datasets():
+    override, _customer_id = _override_db_with_customer_account()
+    app.dependency_overrides[get_db] = override
+    try:
+        client = TestClient(app)
+        headers = auth_headers(client, username="john.doe", password="customer123")
+
+        for path in [
+            "/api/v1/customers",
+            "/api/v1/reservations",
+            "/api/v1/cars",
+            "/api/v1/car-classes",
+            "/api/v1/models",
+            "/api/v1/locations",
+            "/api/v1/dashboard/overview",
+            "/api/v1/auth/customer-accounts",
+        ]:
+            response = client.get(path, headers=headers)
+            assert response.status_code == 403
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_admin_passes_authorization_for_admin_actions_before_payload_validation():
     client = TestClient(app)
 
