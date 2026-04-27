@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
-import { QueueList, SectionCard } from "../../components/ui";
+import type { ColDef } from "ag-grid-community";
+import { formatDateTime } from "../../lib/api";
+import { AdminDataGrid } from "../../components/AdminDataGrid";
+import { SectionCard } from "../../components/ui";
 import type { StaffData } from "../../hooks/useStaffData";
-import type { CustomerAccountAdmin } from "../../lib/types";
+import type { Car, CustomerAccountAdmin, Location, Reservation } from "../../lib/types";
 
 export function AdminSearchTab({
   staff,
@@ -78,6 +81,71 @@ export function AdminSearchTab({
     });
   }, [normalizedQuery, staff.locations]);
 
+  const userColumns = useMemo<ColDef<CustomerAccountAdmin>[]>(() => ([
+    { field: "username", headerName: "Username", minWidth: 170 },
+    {
+      field: "is_active",
+      headerName: "Status",
+      valueFormatter: (params) => params.value ? "Active" : "Inactive",
+      minWidth: 120,
+    },
+    { field: "first_name", headerName: "First", minWidth: 140 },
+    { field: "last_name", headerName: "Last", minWidth: 140 },
+    { field: "city", headerName: "City", minWidth: 150 },
+    { field: "state", headerName: "State", minWidth: 100 },
+    { field: "last_login_at", headerName: "Last Login", valueFormatter: (params) => params.value ? formatDateTime(String(params.value)) : "Never", minWidth: 190 },
+  ]), []);
+
+  const reservationColumns = useMemo<ColDef<Reservation>[]>(() => {
+    const customerName = (customerId: string) => {
+      const customer = staff.customerById[customerId];
+      return customer ? `${customer.first_name} ${customer.last_name}` : customerId;
+    };
+    const locationName = (locationId: string | null) => {
+      const location = locationId ? staff.locationById[locationId] : undefined;
+      return location ? `${location.city}, ${location.state}` : locationId || "-";
+    };
+    const className = (classId: string) => staff.classById[classId]?.class_name || classId;
+
+    return [
+      { field: "reservation_status", headerName: "Status", minWidth: 140 },
+      { field: "customer_id", headerName: "Customer", valueFormatter: (params) => customerName(String(params.value || "")), minWidth: 190 },
+      { field: "location_id", headerName: "Pickup", valueFormatter: (params) => locationName(String(params.value || "")), minWidth: 180 },
+      { field: "return_location_id", headerName: "Return", valueFormatter: (params) => locationName(params.value ? String(params.value) : null), minWidth: 180 },
+      { field: "class_id", headerName: "Class", valueFormatter: (params) => className(String(params.value || "")), minWidth: 160 },
+      { field: "pickup_date_time", headerName: "Pickup Time", valueFormatter: (params) => formatDateTime(String(params.value || "")), minWidth: 190 },
+      { field: "return_date_time_requested", headerName: "Return Time", valueFormatter: (params) => formatDateTime(String(params.value || "")), minWidth: 190 },
+      { field: "reservation_id", headerName: "Reservation ID", minWidth: 260 },
+    ];
+  }, [staff.classById, staff.customerById, staff.locationById]);
+
+  const vehicleColumns = useMemo<ColDef<Car>[]>(() => {
+    const locationName = (locationId: string) => {
+      const location = staff.locationById[locationId];
+      return location ? `${location.city}, ${location.state}` : locationId;
+    };
+    const modelName = (name: string) => {
+      const model = staff.modelByName[name];
+      const carClass = model ? staff.classById[model.class_id] : undefined;
+      return model ? `${model.make_name} ${model.model_name} (${carClass?.class_name || "Unclassified"})` : name;
+    };
+
+    return [
+      { field: "vin", headerName: "VIN", minWidth: 190 },
+      { field: "model_name", headerName: "Model / Class", valueFormatter: (params) => modelName(String(params.value || "")), minWidth: 270 },
+      { field: "location_id", headerName: "Location", valueFormatter: (params) => locationName(String(params.value || "")), minWidth: 180 },
+      { field: "current_odometer_reading", headerName: "Odometer", valueFormatter: (params) => `${Number(params.value || 0).toLocaleString()} mi`, minWidth: 140, filter: "agNumberColumnFilter" },
+    ];
+  }, [staff.classById, staff.locationById, staff.modelByName]);
+
+  const locationColumns = useMemo<ColDef<Location>[]>(() => ([
+    { field: "city", headerName: "City", minWidth: 160 },
+    { field: "state", headerName: "State", minWidth: 100 },
+    { field: "street", headerName: "Street", minWidth: 230 },
+    { field: "zip", headerName: "ZIP", minWidth: 120 },
+    { field: "location_id", headerName: "Location ID", minWidth: 260 },
+  ]), []);
+
   return (
     <>
       <SectionCard title="Global Search" subtitle="Search users, reservations, vehicles, and locations from one admin workspace.">
@@ -86,65 +154,43 @@ export function AdminSearchTab({
         </div>
       </SectionCard>
 
-      <SectionCard title="User Results" subtitle={`${userMatches.length} match(es)`}>
-        <QueueList
-          title="Users"
-          items={userMatches.map((account) => {
-            const customer = staff.customerById[account.customer_id];
-            return {
-              id: account.account_id,
-              title: `${account.username} (${account.is_active ? "active" : "inactive"})`,
-              subtitle: `${customer ? `${customer.first_name} ${customer.last_name}` : `${account.first_name} ${account.last_name}`} · ${account.city}, ${account.state}`,
-              meta: customer?.license_number || "License pending",
-            };
-          })}
+      <SectionCard title="Customer Results" subtitle={`${userMatches.length} match(es)`}>
+        <AdminDataGrid
+          rows={userMatches}
+          columns={userColumns}
+          getRowId={(account) => account.account_id}
           emptyText="No users found."
+          height={360}
         />
       </SectionCard>
 
       <SectionCard title="Reservation Results" subtitle={`${reservationMatches.length} match(es)`}>
-        <QueueList
-          title="Reservations"
-          items={reservationMatches.map((reservation) => {
-            const customer = staff.customerById[reservation.customer_id];
-            const location = staff.locationById[reservation.location_id];
-            return {
-              id: reservation.reservation_id,
-              title: `${reservation.reservation_status} · ${reservation.reservation_id.slice(0, 8)}`,
-              subtitle: `${customer ? `${customer.first_name} ${customer.last_name}` : reservation.customer_id} · ${location ? `${location.city}, ${location.state}` : "Unknown location"}`,
-              meta: reservation.pickup_date_time,
-            };
-          })}
+        <AdminDataGrid
+          rows={reservationMatches}
+          columns={reservationColumns}
+          getRowId={(reservation) => reservation.reservation_id}
           emptyText="No reservations found."
+          height={400}
         />
       </SectionCard>
 
       <SectionCard title="Vehicle Results" subtitle={`${vehicleMatches.length} match(es)`}>
-        <QueueList
-          title="Vehicles"
-          items={vehicleMatches.map((car) => {
-            const location = staff.locationById[car.location_id];
-            return {
-              id: car.vin,
-              title: `${car.model_name} · ${car.vin}`,
-              subtitle: location ? `${location.city}, ${location.state}` : "Unknown branch",
-              meta: `${car.current_odometer_reading.toLocaleString()} mi`,
-            };
-          })}
+        <AdminDataGrid
+          rows={vehicleMatches}
+          columns={vehicleColumns}
+          getRowId={(car) => car.vin}
           emptyText="No vehicles found."
+          height={360}
         />
       </SectionCard>
 
       <SectionCard title="Location Results" subtitle={`${locationMatches.length} match(es)`}>
-        <QueueList
-          title="Locations"
-          items={locationMatches.map((location) => ({
-            id: location.location_id,
-            title: `${location.city}, ${location.state}`,
-            subtitle: location.street,
-            meta: location.zip,
-          }))}
+        <AdminDataGrid
+          rows={locationMatches}
+          columns={locationColumns}
+          getRowId={(location) => location.location_id}
           emptyText="No locations found."
+          height={340}
         />
       </SectionCard>
     </>
