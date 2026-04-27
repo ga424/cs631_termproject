@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type * as React from "react";
-import { QueueList, SectionCard } from "../../components/ui";
+import type { CellValueChangedEvent, ColDef, ICellRendererParams } from "ag-grid-community";
+import { AdminDataGrid } from "../../components/AdminDataGrid";
+import { SectionCard } from "../../components/ui";
 import type { StaffData } from "../../hooks/useStaffData";
+import { api } from "../../lib/api";
+import type { Car, Location } from "../../lib/types";
 
 export function FleetTab({
   staff,
@@ -29,6 +33,130 @@ export function FleetTab({
     carClass,
     models: staff.models.filter((model) => model.class_id === carClass.class_id),
   })).filter((group) => group.models.length > 0);
+
+  async function updateLocationCell(event: CellValueChangedEvent<Location>) {
+    const field = event.colDef.field as keyof Location | undefined;
+    if (!field || field === "location_id" || event.oldValue === event.newValue) {
+      return;
+    }
+    const value = field === "state"
+      ? String(event.newValue ?? "").toUpperCase().slice(0, 2)
+      : String(event.newValue ?? "").trim();
+
+    await staff.perform(async () => {
+      await api.updateLocation(event.data.location_id, { [field]: value } as Partial<Omit<Location, "location_id">>);
+    }, "Location updated.");
+  }
+
+  async function updateCarCell(event: CellValueChangedEvent<Car>) {
+    const field = event.colDef.field as keyof Car | undefined;
+    if (!field || field === "vin" || event.oldValue === event.newValue) {
+      return;
+    }
+    const value = field === "current_odometer_reading"
+      ? Number(event.newValue || 0)
+      : String(event.newValue ?? "").trim();
+
+    if (field === "current_odometer_reading" && Number.isNaN(value)) {
+      staff.setError("Odometer must be a valid number.");
+      return;
+    }
+
+    await staff.perform(async () => {
+      await api.updateCar(event.data.vin, { [field]: value } as Partial<Omit<Car, "vin">>);
+    }, "Car updated.");
+  }
+
+  async function removeCar(vin: string) {
+    if (!window.confirm(`Delete car ${vin}?`)) {
+      return;
+    }
+    await staff.perform(async () => {
+      await api.deleteCar(vin);
+    }, "Car deleted.");
+  }
+
+  const locationColumns = useMemo<ColDef<Location>[]>(() => ([
+    { field: "city", headerName: "City", editable: true, minWidth: 160 },
+    { field: "state", headerName: "State", editable: true, minWidth: 110, valueParser: (params) => String(params.newValue ?? "").toUpperCase().slice(0, 2) },
+    { field: "street", headerName: "Street", editable: true, minWidth: 230 },
+    { field: "zip", headerName: "ZIP", editable: true, minWidth: 120 },
+    { field: "location_id", headerName: "Location ID", minWidth: 260 },
+    {
+      headerName: "Actions",
+      editable: false,
+      filter: false,
+      sortable: false,
+      pinned: "right",
+      width: 120,
+      cellRenderer: (params: ICellRendererParams<Location>) => (
+        <button type="button" className="grid-action-button danger" onClick={() => params.data && deleteLocation(params.data.location_id, params.data.city)}>
+          Delete
+        </button>
+      ),
+    },
+  ]), [deleteLocation]);
+
+  const carColumns = useMemo<ColDef<Car>[]>(() => {
+    const locationIds = staff.locations.map((location) => location.location_id);
+    const modelNames = staff.models.map((model) => model.model_name);
+    const locationName = (locationId: string | null | undefined) => {
+      const location = locationId ? staff.locationById[locationId] : undefined;
+      return location ? `${location.city}, ${location.state}` : locationId || "-";
+    };
+    const modelName = (name: string | null | undefined) => {
+      const model = name ? staff.modelByName[name] : undefined;
+      const carClass = model ? staff.classById[model.class_id] : undefined;
+      return model ? `${model.make_name} ${model.model_name} (${carClass?.class_name || "Unclassified"})` : name || "-";
+    };
+
+    return [
+      { field: "vin", headerName: "VIN", minWidth: 190 },
+      {
+        field: "location_id",
+        headerName: "Location",
+        editable: true,
+        cellEditor: "agSelectCellEditor",
+        cellEditorParams: { values: locationIds },
+        valueFormatter: (params) => locationName(String(params.value || "")),
+        minWidth: 180,
+      },
+      {
+        field: "model_name",
+        headerName: "Model / Class",
+        editable: true,
+        cellEditor: "agSelectCellEditor",
+        cellEditorParams: { values: modelNames },
+        valueFormatter: (params) => modelName(String(params.value || "")),
+        minWidth: 270,
+      },
+      {
+        field: "current_odometer_reading",
+        headerName: "Odometer",
+        editable: true,
+        valueParser: (params) => Number(params.newValue || 0),
+        minWidth: 145,
+      },
+      {
+        headerName: "Status",
+        valueGetter: (params) => staff.openRentalVinSet.has(params.data?.vin || "") ? "Rented" : "Available",
+        minWidth: 130,
+      },
+      {
+        headerName: "Actions",
+        editable: false,
+        filter: false,
+        sortable: false,
+        pinned: "right",
+        width: 120,
+        cellRenderer: (params: ICellRendererParams<Car>) => (
+          <button type="button" className="grid-action-button danger" onClick={() => params.data && void removeCar(params.data.vin)}>
+            Delete
+          </button>
+        ),
+      },
+    ];
+  }, [staff]);
 
   return (
     <>
@@ -85,24 +213,25 @@ export function FleetTab({
           </form>
         ) : null}
       </SectionCard>
-      <SectionCard title="Current inventory" subtitle="Delete only records that are safe to remove.">
-        <QueueList
-          title="Locations"
-          items={staff.locations.map((item) => ({
-            id: item.location_id,
-            title: `${item.city}, ${item.state}`,
-            subtitle: item.street,
-            meta: "Confirm before deleting",
-          }))}
+      <SectionCard title="Locations" subtitle="Inline edit branch address details. Delete remains guarded by backend constraints.">
+        <AdminDataGrid
+          rows={staff.locations}
+          columns={locationColumns}
+          getRowId={(location) => location.location_id}
           emptyText="No locations configured."
+          height={360}
+          onCellValueChanged={updateLocationCell}
         />
-        <div className="action-strip">
-          {staff.locations.slice(0, 4).map((item) => (
-            <button key={item.location_id} type="button" className="danger-mini" onClick={() => deleteLocation(item.location_id, item.city)}>
-              Delete {item.city}
-            </button>
-          ))}
-        </div>
+      </SectionCard>
+      <SectionCard title="Cars" subtitle="Inline edit branch assignment, model/class, and odometer while preserving VIN identity.">
+        <AdminDataGrid
+          rows={staff.cars}
+          columns={carColumns}
+          getRowId={(car) => car.vin}
+          emptyText="No cars registered."
+          height={500}
+          onCellValueChanged={updateCarCell}
+        />
       </SectionCard>
     </>
   );
