@@ -21,6 +21,20 @@ export type CustomerDemoAccount = {
   active_rental_count: number;
 };
 
+export type CustomerAccountAdmin = {
+  account_id: string;
+  customer_id: string;
+  username: string;
+  is_active: boolean;
+  last_login_at: string | null;
+  first_name: string;
+  last_name: string;
+  city: string;
+  state: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type WorkflowStage = {
   stage_id: string;
   label: string;

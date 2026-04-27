@@ -1,6 +1,7 @@
 """Authentication endpoints for staff and customer personas."""
 
 from datetime import datetime
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
@@ -12,11 +13,20 @@ from app.core.security import (
     create_access_token,
     hash_password,
     normalize_username,
+    require_admin,
     verify_password,
 )
 from app.db.session import get_db
 from app.models.models import Customer, CustomerAccount, RentalAgreement, Reservation
-from app.schemas import CustomerDemoAccount, CustomerSignupRequest, LoginRequest, TokenResponse
+from app.schemas import (
+    CustomerAccountAdmin,
+    CustomerAccountAdminCreate,
+    CustomerAccountAdminUpdate,
+    CustomerDemoAccount,
+    CustomerSignupRequest,
+    LoginRequest,
+    TokenResponse,
+)
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -146,3 +156,165 @@ def list_demo_customers(db: Session = Depends(get_db)):
         )
 
     return demo_accounts
+
+
+@router.get("/customer-accounts", response_model=list[CustomerAccountAdmin], dependencies=[Depends(require_admin)])
+def list_customer_accounts(db: Session = Depends(get_db)):
+    accounts = (
+        db.query(CustomerAccount)
+        .join(Customer, CustomerAccount.customer_id == Customer.customer_id)
+        .order_by(Customer.last_name.asc(), Customer.first_name.asc())
+        .all()
+    )
+    return [
+        CustomerAccountAdmin(
+            account_id=account.account_id,
+            customer_id=account.customer_id,
+            username=account.username,
+            is_active=account.is_active,
+            last_login_at=account.last_login_at,
+            first_name=account.customer.first_name,
+            last_name=account.customer.last_name,
+            city=account.customer.city,
+            state=account.customer.state,
+            created_at=account.created_at,
+            updated_at=account.updated_at,
+        )
+        for account in accounts
+    ]
+
+
+@router.post("/customer-accounts", response_model=CustomerAccountAdmin, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_admin)])
+def create_customer_account(payload: CustomerAccountAdminCreate, db: Session = Depends(get_db)):
+    username = normalize_username(payload.username)
+    if db.query(CustomerAccount).filter(CustomerAccount.username == username).first():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username is already taken")
+    if db.query(Customer).filter(Customer.license_number == payload.license_number).first():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="License number already belongs to a customer")
+
+    customer_data = payload.model_dump(exclude={"username", "password", "is_active"})
+    customer = Customer(**customer_data)
+    db.add(customer)
+    db.flush()
+
+    account = CustomerAccount(
+        customer_id=customer.customer_id,
+        username=username,
+        password_hash=hash_password(payload.password),
+        is_active=payload.is_active,
+        last_login_at=None,
+    )
+    db.add(account)
+
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Customer account could not be created") from exc
+
+    db.refresh(account)
+    db.refresh(customer)
+    return CustomerAccountAdmin(
+        account_id=account.account_id,
+        customer_id=account.customer_id,
+        username=account.username,
+        is_active=account.is_active,
+        last_login_at=account.last_login_at,
+        first_name=customer.first_name,
+        last_name=customer.last_name,
+        city=customer.city,
+        state=customer.state,
+        created_at=account.created_at,
+        updated_at=account.updated_at,
+    )
+
+
+@router.put("/customer-accounts/{account_id}", response_model=CustomerAccountAdmin, dependencies=[Depends(require_admin)])
+def update_customer_account(account_id: UUID, payload: CustomerAccountAdminUpdate, db: Session = Depends(get_db)):
+    account = db.query(CustomerAccount).filter(CustomerAccount.account_id == account_id).first()
+    if account is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer account not found")
+
+    customer = db.query(Customer).filter(Customer.customer_id == account.customer_id).first()
+    if customer is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
+
+    update_data = payload.model_dump(exclude_unset=True)
+
+    if "username" in update_data:
+        username = normalize_username(update_data["username"])
+        existing = (
+            db.query(CustomerAccount)
+            .filter(CustomerAccount.username == username, CustomerAccount.account_id != account.account_id)
+            .first()
+        )
+        if existing:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username is already taken")
+        account.username = username
+
+    if "password" in update_data:
+        account.password_hash = hash_password(update_data["password"])
+
+    if "is_active" in update_data:
+        account.is_active = update_data["is_active"]
+
+    customer_fields = {
+        "first_name",
+        "last_name",
+        "street",
+        "city",
+        "state",
+        "zip",
+        "license_number",
+        "license_state",
+        "credit_card_type",
+        "credit_card_number",
+        "exp_month",
+        "exp_year",
+    }
+    for field in customer_fields:
+        if field in update_data:
+            setattr(customer, field, update_data[field])
+
+    if "license_number" in update_data:
+        existing_license = (
+            db.query(Customer)
+            .filter(Customer.license_number == customer.license_number, Customer.customer_id != customer.customer_id)
+            .first()
+        )
+        if existing_license:
+            db.rollback()
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="License number already belongs to a customer")
+
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Customer account could not be updated") from exc
+
+    db.refresh(account)
+    db.refresh(customer)
+    return CustomerAccountAdmin(
+        account_id=account.account_id,
+        customer_id=account.customer_id,
+        username=account.username,
+        is_active=account.is_active,
+        last_login_at=account.last_login_at,
+        first_name=customer.first_name,
+        last_name=customer.last_name,
+        city=customer.city,
+        state=customer.state,
+        created_at=account.created_at,
+        updated_at=account.updated_at,
+    )
+
+
+@router.delete("/customer-accounts/{account_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin)])
+def delete_customer_account(account_id: UUID, db: Session = Depends(get_db)):
+    account = db.query(CustomerAccount).filter(CustomerAccount.account_id == account_id).first()
+    if account is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer account not found")
+
+    db.delete(account)
+    db.commit()
+    return None

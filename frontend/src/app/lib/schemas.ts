@@ -98,6 +98,20 @@ export const customerDemoAccountSchema = z.object({
   active_rental_count: z.number().int().nonnegative(),
 });
 
+export const customerAccountAdminSchema = z.object({
+  account_id: z.string().min(1),
+  customer_id: z.string().min(1),
+  username: z.string().min(1),
+  is_active: z.boolean(),
+  last_login_at: z.string().nullable(),
+  first_name: z.string().min(1),
+  last_name: z.string().min(1),
+  city: z.string().min(1),
+  state: z.string().min(1),
+  created_at: z.string().min(1),
+  updated_at: z.string().min(1),
+});
+
 const dashboardTotalsSchema = z.object({
   total_cars: z.number().int().nonnegative(),
   available_cars: z.number().int().nonnegative(),
@@ -217,3 +231,4 @@ export const carsSchema = z.array(carSchema);
 export const reservationsSchema = z.array(reservationSchema);
 export const rentalAgreementsSchema = z.array(rentalAgreementSchema);
 export const demoCustomersSchema = z.array(customerDemoAccountSchema);
+export const customerAccountAdminsSchema = z.array(customerAccountAdminSchema);

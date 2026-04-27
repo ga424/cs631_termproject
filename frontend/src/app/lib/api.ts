@@ -6,6 +6,8 @@ import {
   carClassSchema,
   carClassesSchema,
   carsSchema,
+  customerAccountAdminSchema,
+  customerAccountAdminsSchema,
   customerSchema,
   customerPortalBookingResponseSchema,
   customerPortalCatalogSchema,
@@ -26,6 +28,7 @@ import type {
   Car,
   CarClass,
   Customer,
+  CustomerAccountAdmin,
   CustomerDemoAccount,
   CustomerPortalBookingRequest,
   CustomerPortalBookingResponse,
@@ -106,6 +109,27 @@ export const api = {
   listDemoCustomers() {
     return apiRequest<CustomerDemoAccount[]>("/api/v1/auth/demo-customers", { skipAuth: true }, demoCustomersSchema);
   },
+  listCustomerAccounts() {
+    return apiRequest<CustomerAccountAdmin[]>("/api/v1/auth/customer-accounts", {}, customerAccountAdminsSchema);
+  },
+  createCustomerAccount(payload: CustomerSignupRequest & { is_active?: boolean }) {
+    return apiRequest<CustomerAccountAdmin>("/api/v1/auth/customer-accounts", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }, customerAccountAdminSchema);
+  },
+  updateCustomerAccount(
+    accountId: string,
+    payload: Partial<CustomerSignupRequest> & { is_active?: boolean; username?: string; password?: string },
+  ) {
+    return apiRequest<CustomerAccountAdmin>(`/api/v1/auth/customer-accounts/${accountId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }, customerAccountAdminSchema);
+  },
+  deleteCustomerAccount(accountId: string) {
+    return apiRequest<void>(`/api/v1/auth/customer-accounts/${accountId}`, { method: "DELETE" });
+  },
   getCustomerPortalCatalog() {
     return apiRequest<CustomerPortalCatalog>("/api/v1/customer-portal/catalog", {}, customerPortalCatalogSchema);
   },
@@ -148,14 +172,32 @@ export const api = {
   createCustomer(payload: Omit<Customer, "customer_id">) {
     return apiRequest<Customer>("/api/v1/customers", { method: "POST", body: JSON.stringify(payload) }, customerSchema);
   },
+  updateCustomer(customerId: string, payload: Partial<Omit<Customer, "customer_id">>) {
+    return apiRequest<Customer>(`/api/v1/customers/${customerId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }, customerSchema);
+  },
+  deleteCustomer(customerId: string) {
+    return apiRequest<void>(`/api/v1/customers/${customerId}`, { method: "DELETE" });
+  },
   createReservation(payload: Omit<Reservation, "reservation_id">) {
     return apiRequest<Reservation>("/api/v1/reservations", { method: "POST", body: JSON.stringify(payload) }, reservationSchema);
+  },
+  updateReservation(reservationId: string, payload: Partial<Omit<Reservation, "reservation_id">>) {
+    return apiRequest<Reservation>(`/api/v1/reservations/${reservationId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }, reservationSchema);
   },
   updateReservationStatus(reservationId: string, reservation_status: string) {
     return apiRequest<Reservation>(`/api/v1/reservations/${reservationId}`, {
       method: "PUT",
       body: JSON.stringify({ reservation_status }),
     }, reservationSchema);
+  },
+  deleteReservation(reservationId: string) {
+    return apiRequest<void>(`/api/v1/reservations/${reservationId}`, { method: "DELETE" });
   },
   createRentalAgreement(payload: {
     reservation_id: string;

@@ -84,6 +84,45 @@ class CustomerSignupRequest(CustomerBase):
     password: str = Field(min_length=8, max_length=128)
 
 
+class CustomerAccountAdminBase(BaseModel):
+    customer_id: UUID
+    username: str
+    is_active: bool
+    last_login_at: Optional[datetime] = None
+
+
+class CustomerAccountAdmin(CustomerAccountAdminBase):
+    account_id: UUID
+    first_name: str
+    last_name: str
+    city: str
+    state: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class CustomerAccountAdminCreate(CustomerSignupRequest):
+    is_active: bool = True
+
+
+class CustomerAccountAdminUpdate(BaseModel):
+    username: Optional[str] = Field(default=None, min_length=3, max_length=80)
+    password: Optional[str] = Field(default=None, min_length=8, max_length=128)
+    is_active: Optional[bool] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    street: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = Field(default=None, min_length=2, max_length=2)
+    zip: Optional[str] = None
+    license_number: Optional[str] = None
+    license_state: Optional[str] = Field(default=None, min_length=2, max_length=2)
+    credit_card_type: Optional[str] = None
+    credit_card_number: Optional[str] = None
+    exp_month: Optional[int] = Field(default=None, ge=1, le=12)
+    exp_year: Optional[int] = None
+
+
 class CustomerUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None

@@ -1,17 +1,24 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import * as React from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useStaffData } from "../../hooks/useStaffData";
 import { MobileLayout } from "../../components/MobileLayout";
 import { AlertStrip } from "../../components/ui";
 import { api } from "../../lib/api";
+import type { CustomerAccountAdmin } from "../../lib/types";
 import { OpsTab } from "./OpsTab";
 import { FleetTab } from "./FleetTab";
 import { PricingTab } from "./PricingTab";
 import { AdminWorkflowTab } from "./AdminWorkflowTab";
+import { AdminUsersTab } from "./AdminUsersTab";
+import { AdminReservationsTab } from "./AdminReservationsTab";
+import { AdminSearchTab } from "./AdminSearchTab";
 
 const TABS = [
   { id: "operations", label: "Ops" },
+  { id: "users", label: "Users" },
+  { id: "reservations", label: "Reservations" },
+  { id: "search", label: "Search" },
   { id: "inventory", label: "Fleet" },
   { id: "pricing", label: "Pricing" },
   { id: "workflow", label: "Workflow" },
@@ -25,6 +32,24 @@ export function AdminConsole() {
   const [classForm, setClassForm] = useState({ class_name: "", daily_rate: "", weekly_rate: "" });
   const [modelForm, setModelForm] = useState({ model_name: "", make_name: "", model_year: "", class_id: "" });
   const [carForm, setCarForm] = useState({ vin: "", current_odometer_reading: "", location_id: "", model_name: "" });
+  const [accounts, setAccounts] = useState<CustomerAccountAdmin[]>([]);
+  const [accountsLoading, setAccountsLoading] = useState(false);
+
+  const reloadAccounts = useCallback(async () => {
+    setAccountsLoading(true);
+    try {
+      const records = await api.listCustomerAccounts();
+      setAccounts(records);
+    } catch {
+      setAccounts([]);
+    } finally {
+      setAccountsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void reloadAccounts();
+  }, [reloadAccounts]);
 
   async function createLocation(event: React.FormEvent) {
     event.preventDefault();
@@ -97,6 +122,16 @@ export function AdminConsole() {
       <AlertStrip error={staff.error} success={staff.success} />
       {staff.loading ? <div className="loading-strip">Syncing admin controls…</div> : null}
       {activeTab === "operations" ? <OpsTab staff={staff} /> : null}
+      {activeTab === "users" ? (
+        <AdminUsersTab
+          staff={staff}
+          accounts={accounts}
+          accountsLoading={accountsLoading}
+          reloadAccounts={reloadAccounts}
+        />
+      ) : null}
+      {activeTab === "reservations" ? <AdminReservationsTab staff={staff} /> : null}
+      {activeTab === "search" ? <AdminSearchTab staff={staff} accounts={accounts} /> : null}
       {activeTab === "inventory" ? (
         <FleetTab
           staff={staff}
