@@ -16,7 +16,7 @@ import { AdminSearchTab } from "./AdminSearchTab";
 
 const TABS = [
   { id: "operations", label: "Ops" },
-  { id: "users", label: "Users" },
+  { id: "users", label: "Customers" },
   { id: "reservations", label: "Reservations" },
   { id: "search", label: "Search" },
   { id: "inventory", label: "Fleet" },
