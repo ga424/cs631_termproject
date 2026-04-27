@@ -216,17 +216,50 @@ export const api = {
   createLocation(payload: Omit<Location, "location_id">) {
     return apiRequest<Location>("/api/v1/locations", { method: "POST", body: JSON.stringify(payload) }, locationSchema);
   },
+  updateLocation(locationId: string, payload: Partial<Omit<Location, "location_id">>) {
+    return apiRequest<Location>(`/api/v1/locations/${locationId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }, locationSchema);
+  },
   deleteLocation(locationId: string) {
     return apiRequest<void>(`/api/v1/locations/${locationId}`, { method: "DELETE" });
   },
   createCarClass(payload: Omit<CarClass, "class_id">) {
     return apiRequest<CarClass>("/api/v1/car-classes", { method: "POST", body: JSON.stringify(payload) }, carClassSchema);
   },
+  updateCarClass(classId: string, payload: Partial<Omit<CarClass, "class_id">>) {
+    return apiRequest<CarClass>(`/api/v1/car-classes/${classId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }, carClassSchema);
+  },
+  deleteCarClass(classId: string) {
+    return apiRequest<void>(`/api/v1/car-classes/${classId}`, { method: "DELETE" });
+  },
   createModel(payload: Model) {
     return apiRequest<Model>("/api/v1/models", { method: "POST", body: JSON.stringify(payload) }, modelSchema);
   },
+  updateModel(modelName: string, payload: Partial<Model>) {
+    return apiRequest<Model>(`/api/v1/models/${encodeURIComponent(modelName)}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }, modelSchema);
+  },
+  deleteModel(modelName: string) {
+    return apiRequest<void>(`/api/v1/models/${encodeURIComponent(modelName)}`, { method: "DELETE" });
+  },
   createCar(payload: Car) {
     return apiRequest<Car>("/api/v1/cars", { method: "POST", body: JSON.stringify(payload) }, carSchema);
+  },
+  updateCar(vin: string, payload: Partial<Omit<Car, "vin">>) {
+    return apiRequest<Car>(`/api/v1/cars/${vin}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }, carSchema);
+  },
+  deleteCar(vin: string) {
+    return apiRequest<void>(`/api/v1/cars/${vin}`, { method: "DELETE" });
   },
 };
 

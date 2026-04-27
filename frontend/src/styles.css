@@ -1144,6 +1144,61 @@ select {
   background: linear-gradient(140deg, #8a1c16, var(--danger));
 }
 
+.admin-grid-frame {
+  width: 100%;
+  margin-top: 14px;
+  overflow-x: auto;
+  border: 1px solid rgba(221, 213, 200, 0.95);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.admin-data-grid {
+  min-width: 860px;
+  --ag-font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
+  --ag-font-size: 13px;
+  --ag-background-color: #fffdf8;
+  --ag-header-background-color: #f7efe2;
+  --ag-header-foreground-color: var(--ink);
+  --ag-foreground-color: var(--ink);
+  --ag-secondary-foreground-color: var(--muted);
+  --ag-border-color: rgba(221, 213, 200, 0.95);
+  --ag-row-hover-color: #f6fbf8;
+  --ag-selected-row-background-color: #d9f6ef;
+  --ag-wrapper-border-radius: 8px;
+}
+
+.admin-grid-empty {
+  display: inline-flex;
+  margin: 28px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.grid-action-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+}
+
+.grid-action-button {
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  background: #eef8f5;
+  color: var(--accent-dark);
+  box-shadow: none;
+}
+
+.grid-action-button.danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
 @media (min-width: 760px) {
   .login-shell,
   .app-shell,
