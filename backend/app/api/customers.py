@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from uuid import UUID
+from app.core.db_errors import conflict_from_integrity_error
 from app.core.entity_audit import record_entity_event
 from app.core.security import StaffPrincipal, require_staff
 from app.db.session import get_db
@@ -38,16 +39,20 @@ def create_customer(
     """Create a new customer"""
     db_customer = Customer(**customer.dict())
     db.add(db_customer)
-    db.flush()
-    record_entity_event(
-        db,
-        actor=current_user,
-        action="CREATED",
-        entity_type="customer",
-        entity_id=db_customer.customer_id,
-        notes=f"Created customer {db_customer.first_name} {db_customer.last_name}.",
-    )
-    db.commit()
+    try:
+        db.flush()
+        record_entity_event(
+            db,
+            actor=current_user,
+            action="CREATED",
+            entity_type="customer",
+            entity_id=db_customer.customer_id,
+            notes=f"Created customer {db_customer.first_name} {db_customer.last_name}.",
+        )
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise conflict_from_integrity_error(exc, "Customer could not be created") from exc
     db.refresh(db_customer)
     return db_customer
 
@@ -77,7 +82,11 @@ def update_customer(
         notes=f"Updated customer fields: {', '.join(update_data.keys()) or 'none'}.",
     )
     
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise conflict_from_integrity_error(exc, "Customer could not be updated") from exc
     db.refresh(db_customer)
     return db_customer
 
