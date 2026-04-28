@@ -64,18 +64,22 @@ export function AdminReservationsTab({ staff }: { staff: StaffData }) {
     };
 
     if (editingReservationId) {
-      await staff.perform(async () => {
+      const ok = await staff.perform(async () => {
         await api.updateReservation(editingReservationId, payload);
       }, "Reservation updated.");
-      setShowForm(false);
+      if (ok) {
+        setShowForm(false);
+      }
       return;
     }
 
-    await staff.perform(async () => {
+    const ok = await staff.perform(async () => {
       await api.createReservation(payload);
       setForm(DEFAULT_FORM);
     }, "Reservation created.");
-    setShowForm(false);
+    if (ok) {
+      setShowForm(false);
+    }
   }
 
   function startEdit(reservationId: string) {

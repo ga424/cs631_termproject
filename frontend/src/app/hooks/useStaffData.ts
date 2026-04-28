@@ -115,8 +115,13 @@ export function useStaffData() {
       setSuccess(message);
       setError("");
       await refresh();
+      return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Operation failed.");
+      const errorMessage = err instanceof Error ? err.message : "Operation failed.";
+      await refresh();
+      setSuccess("");
+      setError(errorMessage);
+      return false;
     }
   }
 

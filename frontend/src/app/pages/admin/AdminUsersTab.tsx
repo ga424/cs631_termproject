@@ -94,23 +94,27 @@ export function AdminUsersTab({
     };
 
     if (editingAccountId) {
-      await staff.perform(async () => {
+      const ok = await staff.perform(async () => {
         await api.updateCustomerAccount(editingAccountId, {
           ...payload,
           password: form.password ? form.password : undefined,
         });
         await reloadAccounts();
       }, "Customer account updated.");
-      setShowForm(false);
+      if (ok) {
+        setShowForm(false);
+      }
       return;
     }
 
-    await staff.perform(async () => {
+    const ok = await staff.perform(async () => {
       await api.createCustomerAccount(payload);
       await reloadAccounts();
       setForm(DEFAULT_ACCOUNT_FORM);
     }, "Customer account created.");
-    setShowForm(false);
+    if (ok) {
+      setShowForm(false);
+    }
   }
 
   async function removeAccount(accountId: string, username: string) {

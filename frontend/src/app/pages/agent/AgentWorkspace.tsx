@@ -60,7 +60,7 @@ export function AgentWorkspace() {
 
   async function createCustomer(event: React.FormEvent) {
     event.preventDefault();
-    await staff.perform(async () => {
+    return staff.perform(async () => {
       const created = await api.createCustomer({
         ...customerForm,
         exp_month: Number(customerForm.exp_month),
@@ -73,7 +73,7 @@ export function AgentWorkspace() {
 
   async function createReservation(event: React.FormEvent) {
     event.preventDefault();
-    await staff.perform(async () => {
+    return staff.perform(async () => {
       const created = await api.createReservation({
         ...reservationForm,
         pickup_date_time: new Date(reservationForm.pickup_date_time).toISOString(),
@@ -87,7 +87,7 @@ export function AgentWorkspace() {
 
   async function createRental(event: React.FormEvent) {
     event.preventDefault();
-    await staff.perform(async () => {
+    return staff.perform(async () => {
       const created = await api.createRentalAgreement({
         reservation_id: rentalForm.reservation_id,
         vin: rentalForm.vin,
@@ -100,7 +100,7 @@ export function AgentWorkspace() {
 
   async function closeRental(event: React.SyntheticEvent) {
     event.preventDefault();
-    await staff.perform(async () => {
+    return staff.perform(async () => {
       await api.closeRentalAgreement(returnForm.contract_no, {
         rental_end_date_time: new Date(returnForm.rental_end_date_time).toISOString(),
         end_odometer_reading: Number(returnForm.end_odometer_reading),
@@ -112,7 +112,7 @@ export function AgentWorkspace() {
 
   async function updateStatus(event: React.FormEvent) {
     event.preventDefault();
-    await staff.perform(async () => {
+    return staff.perform(async () => {
       await api.updateReservationStatus(statusForm.reservation_id, statusForm.reservation_status);
       setStatusForm({ reservation_id: "", reservation_status: "CANCELED" });
     }, `Reservation marked ${statusForm.reservation_status}.`);

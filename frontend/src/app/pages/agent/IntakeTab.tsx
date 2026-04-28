@@ -45,8 +45,8 @@ export function IntakeTab({
   reservationForm: AgentReservationForm;
   setCustomerForm: React.Dispatch<React.SetStateAction<AgentCustomerForm>>;
   setReservationForm: React.Dispatch<React.SetStateAction<AgentReservationForm>>;
-  createCustomer: (event: React.FormEvent) => Promise<void> | void;
-  createReservation: (event: React.FormEvent) => Promise<void> | void;
+  createCustomer: (event: React.FormEvent) => Promise<boolean> | boolean;
+  createReservation: (event: React.FormEvent) => Promise<boolean> | boolean;
 }) {
   const [openForm, setOpenForm] = useState<"customer" | "reservation" | "">("");
 
@@ -56,7 +56,7 @@ export function IntakeTab({
         {openForm !== "customer" ? (
           <button type="button" onClick={() => setOpenForm("customer")}>Create Customer</button>
         ) : (
-          <form className="stack-form" onSubmit={async (event) => { await createCustomer(event); setOpenForm(""); }}>
+          <form className="stack-form" onSubmit={async (event) => { if (await createCustomer(event)) setOpenForm(""); }}>
             <div className="field-grid two-col">
               <input placeholder="First name" value={customerForm.first_name} onChange={(e) => setCustomerForm((c) => ({ ...c, first_name: e.target.value }))} required />
               <input placeholder="Last name" value={customerForm.last_name} onChange={(e) => setCustomerForm((c) => ({ ...c, last_name: e.target.value }))} required />
@@ -83,7 +83,7 @@ export function IntakeTab({
         {openForm !== "reservation" ? (
           <button type="button" onClick={() => setOpenForm("reservation")}>Create Reservation</button>
         ) : (
-          <form className="stack-form" onSubmit={async (event) => { await createReservation(event); setOpenForm(""); }}>
+          <form className="stack-form" onSubmit={async (event) => { if (await createReservation(event)) setOpenForm(""); }}>
             <select aria-label="Reservation customer" value={reservationForm.customer_id} onChange={(e) => setReservationForm((c) => ({ ...c, customer_id: e.target.value }))} required>
               <option value="">Customer</option>
               {staff.customers.map((item) => <option key={item.customer_id} value={item.customer_id}>{item.first_name} {item.last_name}</option>)}

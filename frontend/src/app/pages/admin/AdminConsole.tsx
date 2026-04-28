@@ -69,7 +69,7 @@ export function AdminConsole() {
 
   async function createLocation(event: React.FormEvent) {
     event.preventDefault();
-    await staff.perform(async () => {
+    return staff.perform(async () => {
       const created = await api.createLocation(locationForm);
       setCarForm((current) => ({ ...current, location_id: created.location_id }));
       setLocationForm({ street: "", city: "", state: "", zip: "" });
@@ -78,7 +78,7 @@ export function AdminConsole() {
 
   async function createClass(event: React.FormEvent) {
     event.preventDefault();
-    await staff.perform(async () => {
+    return staff.perform(async () => {
       const created = await api.createCarClass({
         class_name: classForm.class_name,
         daily_rate: Number(classForm.daily_rate),
@@ -91,7 +91,7 @@ export function AdminConsole() {
 
   async function createModel(event: React.FormEvent) {
     event.preventDefault();
-    await staff.perform(async () => {
+    return staff.perform(async () => {
       const created = await api.createModel({
         model_name: modelForm.model_name,
         make_name: modelForm.make_name,
@@ -105,7 +105,7 @@ export function AdminConsole() {
 
   async function createCar(event: React.FormEvent) {
     event.preventDefault();
-    await staff.perform(async () => {
+    return staff.perform(async () => {
       await api.createCar({
         vin: carForm.vin,
         current_odometer_reading: Number(carForm.current_odometer_reading),
@@ -120,7 +120,7 @@ export function AdminConsole() {
     if (!window.confirm(`Delete ${city} location?`)) {
       return;
     }
-    await staff.perform(async () => {
+    return staff.perform(async () => {
       await api.deleteLocation(locationId);
     }, `${city} location deleted.`);
   }

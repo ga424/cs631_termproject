@@ -22,8 +22,8 @@ export function FleetTab({
   carForm: { vin: string; current_odometer_reading: string; location_id: string; model_name: string };
   setLocationForm: React.Dispatch<React.SetStateAction<{ street: string; city: string; state: string; zip: string }>>;
   setCarForm: React.Dispatch<React.SetStateAction<{ vin: string; current_odometer_reading: string; location_id: string; model_name: string }>>;
-  createLocation: (event: React.FormEvent) => Promise<void> | void;
-  createCar: (event: React.FormEvent) => Promise<void> | void;
+  createLocation: (event: React.FormEvent) => Promise<boolean> | boolean;
+  createCar: (event: React.FormEvent) => Promise<boolean> | boolean;
   deleteLocation: (locationId: string, city: string) => void;
 }) {
   const [openForm, setOpenForm] = useState<"location" | "car" | "">("");
@@ -166,7 +166,7 @@ export function FleetTab({
           <button type="button" onClick={() => setOpenForm(openForm === "car" ? "" : "car")}>Register Car</button>
         </div>
         {openForm === "location" ? (
-          <form className="stack-form" onSubmit={async (event) => { await createLocation(event); setOpenForm(""); }}>
+          <form className="stack-form" onSubmit={async (event) => { if (await createLocation(event)) setOpenForm(""); }}>
             <div className="field-grid two-col">
               <input placeholder="Street" value={locationForm.street} onChange={(e) => setLocationForm((c) => ({ ...c, street: e.target.value }))} required />
               <input placeholder="City" value={locationForm.city} onChange={(e) => setLocationForm((c) => ({ ...c, city: e.target.value }))} required />
@@ -180,7 +180,7 @@ export function FleetTab({
           </form>
         ) : null}
         {openForm === "car" ? (
-          <form className="stack-form" onSubmit={async (event) => { await createCar(event); setOpenForm(""); }}>
+          <form className="stack-form" onSubmit={async (event) => { if (await createCar(event)) setOpenForm(""); }}>
             <input placeholder="VIN" minLength={17} maxLength={17} value={carForm.vin} onChange={(e) => setCarForm((c) => ({ ...c, vin: e.target.value }))} required />
             <input type="number" min="0" placeholder="Current odometer" value={carForm.current_odometer_reading} onChange={(e) => setCarForm((c) => ({ ...c, current_odometer_reading: e.target.value }))} required />
             <select aria-label="Car branch location" value={carForm.location_id} onChange={(e) => setCarForm((c) => ({ ...c, location_id: e.target.value }))} required>

@@ -300,6 +300,33 @@ test("admin data grids organize customers reservations cars and locations", asyn
   await expect(page.getByText("Toyota Camry (Full-Size)")).toBeVisible();
 });
 
+test("admin create form stays open when the backend rejects the operation", async ({ page }) => {
+  await signInAs(page, "admin");
+  await page.route("**/api/v1/locations", async (route) => {
+    if (route.request().method() === "POST") {
+      await route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: "Location address already exists" })
+      });
+      return;
+    }
+    await route.fallback();
+  });
+
+  await page.getByRole("button", { name: /^fleet$/i }).click();
+  await page.getByRole("button", { name: /^add location$/i }).click();
+  await page.getByPlaceholder("Street").fill("20 Market St");
+  await page.getByPlaceholder("City").fill("Newark");
+  await page.getByPlaceholder("State").fill("NJ");
+  await page.getByPlaceholder("ZIP").fill("07102");
+  await page.getByRole("button", { name: /save location/i }).click();
+
+  await expect(page.getByText(/request failed \(409\): location address already exists/i)).toBeVisible();
+  await expect(page.getByPlaceholder("Street")).toBeVisible();
+  await expect(page.getByPlaceholder("Street")).toHaveValue("20 Market St");
+});
+
 for (const role of ["customer", "agent", "manager"]) {
   test(`${role} cannot open the admin console route`, async ({ page }) => {
     await signInAs(page, role);
