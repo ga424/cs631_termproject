@@ -13,6 +13,7 @@ from app.core.security import (
     authenticate_staff,
     create_access_token,
     hash_password,
+    is_staff_username,
     normalize_username,
     require_admin,
     verify_password,
@@ -70,6 +71,8 @@ def login(credentials: LoginRequest, db: Session = Depends(get_db)):
 @router.post("/customer-signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def signup_customer(payload: CustomerSignupRequest, db: Session = Depends(get_db)):
     username = normalize_username(payload.username)
+    if is_staff_username(username):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username is reserved for staff login")
     if db.query(CustomerAccount).filter(CustomerAccount.username == username).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username is already taken")
     if db.query(Customer).filter(Customer.license_number == payload.license_number).first():
@@ -192,6 +195,8 @@ def create_customer_account(
     db: Session = Depends(get_db),
 ):
     username = normalize_username(payload.username)
+    if is_staff_username(username):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username is reserved for staff login")
     if db.query(CustomerAccount).filter(CustomerAccount.username == username).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username is already taken")
     if db.query(Customer).filter(Customer.license_number == payload.license_number).first():
@@ -262,6 +267,8 @@ def update_customer_account(
 
     if "username" in update_data:
         username = normalize_username(update_data["username"])
+        if is_staff_username(username):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username is reserved for staff login")
         existing = (
             db.query(CustomerAccount)
             .filter(CustomerAccount.username == username, CustomerAccount.account_id != account.account_id)

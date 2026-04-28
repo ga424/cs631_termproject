@@ -81,6 +81,7 @@ def _override_db_with_customer_account():
         finally:
             db.close()
 
+    _dependency_override.SessionLocal = TestingSessionLocal
     return _dependency_override, customer_id
 
 
@@ -167,6 +168,101 @@ def test_customer_cannot_read_another_customer_portal_summary():
         response = client.get(f"/api/v1/customer-portal/summary/{uuid4()}", headers=headers)
 
         assert response.status_code == 403
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_deactivated_customer_account_token_cannot_use_customer_portal():
+    override, _customer_id = _override_db_with_customer_account()
+    app.dependency_overrides[get_db] = override
+    try:
+        client = TestClient(app)
+        headers = auth_headers(client, username="john.doe", password="customer123")
+
+        db = override.SessionLocal()
+        try:
+            account = db.query(CustomerAccount).filter(CustomerAccount.username == "john.doe").one()
+            account.is_active = False
+            db.commit()
+        finally:
+            db.close()
+
+        response = client.get("/api/v1/customer-portal/me", headers=headers)
+        assert response.status_code == 403
+        assert "inactive" in response.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_customer_account_creation_rejects_reserved_staff_usernames():
+    override, _customer_id = _override_db_with_customer_account()
+    app.dependency_overrides[get_db] = override
+    try:
+        client = TestClient(app)
+        signup_payload = {
+            "username": "admin",
+            "password": "customer123",
+            "first_name": "Reserved",
+            "last_name": "Signup",
+            "street": "20 Market St",
+            "city": "Newark",
+            "state": "NJ",
+            "zip": "07102",
+            "license_number": "NJ-RESERVED-SIGNUP",
+            "license_state": "NJ",
+            "credit_card_type": "Visa",
+            "credit_card_number": "4111111111111111",
+            "exp_month": 12,
+            "exp_year": 2028,
+        }
+        signup = client.post("/api/v1/auth/customer-signup", json=signup_payload)
+        assert signup.status_code == 409
+        assert "reserved" in signup.json()["detail"]
+
+        admin_headers = auth_headers(client, username="admin", password="admin123")
+        admin_create = client.post(
+            "/api/v1/auth/customer-accounts",
+            json={**signup_payload, "username": "agent", "license_number": "NJ-RESERVED-ADMIN", "is_active": True},
+            headers=admin_headers,
+        )
+        assert admin_create.status_code == 409
+        assert "reserved" in admin_create.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_duplicate_customer_license_returns_conflict_instead_of_server_error():
+    override, _customer_id = _override_db_with_customer_account()
+    app.dependency_overrides[get_db] = override
+    try:
+        client = TestClient(app)
+        db = override.SessionLocal()
+        try:
+            existing_license = db.query(Customer).filter(Customer.first_name == "John").one().license_number
+        finally:
+            db.close()
+
+        response = client.post(
+            "/api/v1/customers",
+            json={
+                "first_name": "Duplicate",
+                "last_name": "License",
+                "street": "20 Market St",
+                "city": "Newark",
+                "state": "NJ",
+                "zip": "07102",
+                "license_number": existing_license,
+                "license_state": "NJ",
+                "credit_card_type": "Visa",
+                "credit_card_number": "4111111111111111",
+                "exp_month": 12,
+                "exp_year": 2028,
+            },
+            headers=auth_headers(client, username="agent", password="agent123"),
+        )
+
+        assert response.status_code == 409
+        assert "License number" in response.json()["detail"]
     finally:
         app.dependency_overrides.clear()
 

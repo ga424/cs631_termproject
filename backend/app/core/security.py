@@ -65,6 +65,11 @@ def normalize_username(username: str) -> str:
     return username.strip().lower()
 
 
+def is_staff_username(username: str) -> bool:
+    """Return true when a normalized username is reserved for staff auth."""
+    return normalize_username(username) in {normalize_username(item) for item in _staff_users()}
+
+
 def hash_password(password: str) -> str:
     salt = os.urandom(16)
     iterations = 210_000
