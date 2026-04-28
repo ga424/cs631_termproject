@@ -79,6 +79,10 @@ Comprehensive Entity Relationship Diagram (ERD) showing the complete database sc
    - Fields: event_id (PK, UUID), reservation_id, contract_no, customer_id, event_type, actor_role, actor_username, event_timestamp, notes
    - Relationships: Records who did what and when for reservation, pickup, rental, return, and billing events
 
+10. **ENTITY_AUDIT_EVENT** - Admin/staff entity change audit trail
+    - Fields: event_id (PK, UUID), entity_type, entity_id, action, actor_role, actor_username, event_timestamp, notes
+    - Relationships: Records governed create, update, and delete events by logical entity type/id across admin grid and CRUD workflows
+
 #### Key Relationships:
 
 - One customer can make many reservations
@@ -89,6 +93,7 @@ Comprehensive Entity Relationship Diagram (ERD) showing the complete database sc
 - One reservation creates at most one rental agreement
 - One car can be used in many rental agreements over time
 - One reservation can have many lifecycle audit events
+- Entity audit events reference changed records by entity type/id so one table can cover locations, classes, models, cars, customers, accounts, and reservations
 
 #### Business Rules:
 
@@ -99,6 +104,7 @@ Comprehensive Entity Relationship Diagram (ERD) showing the complete database sc
 - Integrity errors: duplicate class/model/VIN values and invalid class/location/model references are normalized into clear `409 Conflict` API errors
 - Odometer tracking: Pickup odometer is derived from the selected car; return odometer is captured at closeout
 - Auditability: Lifecycle events store actor, timestamp, reservation, optional contract, and notes
+- Admin change auditability: Staff/admin CRUD changes store actor, timestamp, action, entity type/id, and notes in `entity_audit_event`
 - Payment: Stored on customer for recurring rental convenience
 
 **Validation Status**: ✅ ERD validated and rendering properly
@@ -116,6 +122,7 @@ User journey views that connect course requirements to concrete workflows and AP
 - Fleet and pricing administration flows
 - DB-backed customer signup/login and customer-owned portal data
 - Rental lifecycle audit trail views
+- Admin entity audit trail views
 - Strict TypeScript frontend checks plus mocked and live Playwright persona tests
 
 These journeys are intended to support:

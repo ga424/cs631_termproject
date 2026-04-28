@@ -141,6 +141,12 @@ curl http://localhost:8000/api/v1/reservations \
   -H "Authorization: Bearer {access_token}"
 ```
 
+**List recent admin/staff entity audit events:**
+```bash
+curl http://localhost:8000/api/v1/audit-events \
+  -H "Authorization: Bearer {access_token}"
+```
+
 **Get API health status:**
 ```bash
 curl http://localhost:8000/health
@@ -216,6 +222,8 @@ Use the admin console in this order:
 
 The model dropdown is grouped by class because cars inherit their reservation/pricing class through the selected model. If a duplicate class/model/VIN or missing relationship is submitted, the API returns a `409 Conflict` with a clear relationship error.
 
+Admin grid edits and create/delete actions display notification banners for success or errors. Successful governed changes are written to `entity_audit_event`; review them in the Admin Ops tab under **Entity Audit Trail** or through `GET /api/v1/audit-events`.
+
 ### Customers (5 Total)
 - John Doe (NY)
 - Jane Smith (CA)
@@ -251,6 +259,7 @@ Seeded customer login usernames are generated as lowercase first/last names, for
 - **Rental Agreements**: `/api/v1/rental-agreements`
 - **Customer Portal**: `/api/v1/customer-portal`
 - **Dashboard**: `/api/v1/dashboard/overview`
+- **Entity Audit Events**: `/api/v1/audit-events` (admin only)
 
 ### All Resources Support
 - `GET /resource` - List all

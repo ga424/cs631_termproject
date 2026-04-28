@@ -188,6 +188,7 @@ stateDiagram-v2
 4. Register/update cars by selecting an existing location and model.
 5. Confirm the class inherited by the selected model before saving a VIN.
 6. Seed/demo data keeps at least two assignable vehicles per branch and bookable class, so agents can complete pickup assignments while the customer catalog can still show intentionally out-of-stock classes.
+7. Review notification banners after grid edits or form actions, then confirm the **Entity Audit Trail** records who changed which governed entity and when.
 
 ### Core Data
 - `location`, `car_class`, `model`, `car`
@@ -197,12 +198,14 @@ stateDiagram-v2
 - `/api/v1/car-classes`
 - `/api/v1/models`
 - `/api/v1/cars`
+- `/api/v1/audit-events`
 
 ### Integrity Rules
 - `car_class.class_name`, `model.model_name`, and `car.vin` must be unique.
 - `model.class_id` must reference an existing car class.
 - `car.model_name` and `car.location_id` must reference existing records.
 - Invalid references and duplicate keys return clear `409 Conflict` responses.
+- Successful creates, updates, and deletes are written to `entity_audit_event` for admin review.
 
 ## Journey 7: Customer Self-Service Account And Trip History
 

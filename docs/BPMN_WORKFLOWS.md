@@ -38,6 +38,7 @@ flowchart TD
 | Return And Billing | Agent | Agent Workspace / Return | `PUT /api/v1/rental-agreements/{contract_no}` |
 | Exception Handling | Agent + Manager | Agent / Return, Manager / Exceptions | `PUT /api/v1/reservations/{reservation_id}` |
 | Fleet And Pricing Maintenance | Admin | Admin Console / Fleet + Pricing | `/api/v1/locations`, `/api/v1/car-classes`, `/api/v1/models`, `/api/v1/cars` |
+| Entity Change Audit | Admin | Admin Console / Ops | `GET /api/v1/audit-events` |
 
 ## UI Visibility Rules
 
@@ -46,5 +47,6 @@ flowchart TD
 - Managers see branch health, overdue items, and blocked workflow cases.
 - Rental Admins see configuration and inventory controls, plus workflow governance visibility.
 - Rental Admins manage inventory in relational order: class rates, models assigned to classes, then VINs assigned to models and locations.
+- Rental Admins review `entity_audit_event` history for governed create, update, and delete actions made through grids and CRUD forms.
 - Pickup assignment dropdowns show only cars that are available, in the reservation pickup branch, and in the requested class.
 - Customer trip cards show lifecycle drilldowns from `rental_lifecycle_event`, including actor and timestamp.

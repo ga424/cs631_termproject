@@ -20,6 +20,7 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
 ├── backend/                          # FastAPI application
 │   ├── app/
 │   │   ├── api/                     # API route handlers
+│   │   │   ├── audit_events.py      # Admin entity audit trail endpoint
 │   │   │   ├── auth.py              # JWT login endpoint
 │   │   │   ├── customer_portal.py   # Customer self-service booking/trip endpoints
 │   │   │   ├── dashboard.py         # Staff dashboard metrics
@@ -274,6 +275,10 @@ curl http://localhost:8000/api/v1/cars \
 curl http://localhost:8000/api/v1/dashboard/overview \
   -H "Authorization: Bearer {access_token}"
 
+# View recent admin/staff entity audit events
+curl http://localhost:8000/api/v1/audit-events \
+  -H "Authorization: Bearer {access_token}"
+
 # Get health status
 curl http://localhost:8000/health
 
@@ -428,6 +433,7 @@ The database supports the full rental lifecycle across these primary entities:
 - **reservations**: Pickup/return requests by customer, class, and location
 - **rental_agreements**: Open and returned/billed contracts tied to a reservation and VIN
 - **rental_lifecycle_event**: durable audit trail of who reserved, canceled, picked up, opened, returned, and billed each trip
+- **entity_audit_event**: durable audit trail of admin/staff create, update, and delete operations for governed entities
 
 ### Fleet And Pricing Governance
 
@@ -439,6 +445,8 @@ The admin console follows the same relational chain enforced by the database:
 
 The UI groups model choices by class and shows the selected model's governed class when registering a car. Backend endpoints return clear `409 Conflict` responses when a duplicate class/model/VIN is submitted or when a model, location, or class reference does not exist.
 
+Admin and staff grid mutations show success/error notification banners in the UI. Successful creates, updates, and deletes on customers, customer accounts, reservations, locations, classes, models, and cars write `entity_audit_event` rows with the actor username, role, timestamp, action, entity type, entity id, and notes. Admins can review the latest events in the Ops tab or via `GET /api/v1/audit-events`.
+
 ### Liquibase Migrations
 Database schema is managed through Liquibase XML changesets:
 - `01-init-schema.xml`: Creates extensions, functions, and triggers
@@ -447,6 +455,7 @@ Database schema is managed through Liquibase XML changesets:
 - `04-create-customer-accounts.xml`: Adds customer login accounts linked 1:1 to customers
 - `05-add-rental-lifecycle-events.xml`: Adds reservation `FULFILLED` status and lifecycle audit events
 - `06-add-reservation-return-location.xml`: Adds separate return location support
+- `07-add-entity-audit-events.xml`: Adds admin/staff entity audit events for grid and CRUD mutations
 
 ### Running Migrations
 Migrations run automatically on service startup via `liquibase` container. To run manually:

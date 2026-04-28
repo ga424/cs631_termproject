@@ -139,6 +139,7 @@ erDiagram
 | **RESERVATION** | Pre-bookings by customers | `reservation_id` (UUID) | Pickup location, optional different return location, requested class/date range |
 | **RENTAL_AGREEMENT** | Actual rental contracts | `contract_no` (UUID) | Unique FK to RESERVATION; one rental per reservation |
 | **RENTAL_LIFECYCLE_EVENT** | Durable trip audit history | `event_id` (UUID) | Reservation event type, actor role/username, timestamp, optional contract |
+| **ENTITY_AUDIT_EVENT** | Durable admin/staff CRUD audit history | `event_id` (UUID) | Entity type/id, action, actor role/username, timestamp, notes |
 
 ### Key Relationships
 
@@ -153,6 +154,7 @@ erDiagram
 - **RESERVATION** → **RENTAL_AGREEMENT**: One-to-zero-or-one (active/canceled/no-show reservations may not have a rental contract)
 - **RESERVATION** → **RENTAL_LIFECYCLE_EVENT**: One reservation has many lifecycle events
 - **CAR** → **RENTAL_AGREEMENT**: One car can have multiple rental agreements over time
+- **ENTITY_AUDIT_EVENT** records cross-entity CRUD activity by logical entity type/id instead of using hard foreign keys to every managed table.
 
 ### Data Types
 
@@ -179,6 +181,7 @@ All tables include:
 - `reservation.reservation_status`: Filter by active/cancelled status
 - `rental_agreement.reservation_id`: One-to-one lookup
 - `rental_agreement.vin`: Query rentals by vehicle
+- `entity_audit_event.entity_type`, `entity_audit_event.entity_id`, `entity_audit_event.action`, `entity_audit_event.actor_username`, `entity_audit_event.event_timestamp`: Admin audit trail filtering and sorting
 
 ### Business Rules
 
@@ -190,5 +193,6 @@ All tables include:
 6. **Pricing**: Cost is calculated using CAR_CLASS daily/weekly rates and rental duration unless an authorized closeout override is provided.
 7. **Odometer Tracking**: start odometer is derived from the car record at pickup; end odometer is captured at return and updates the car record.
 8. **Customer Ownership**: Customer JWTs can access only their own `/customer-portal/me` summary and booking data.
-9. **Audit Trail**: Lifecycle events store who did what and when for reserved, canceled, no-show, picked-up, opened, returned, and billed steps.
-10. **Payment Info**: Stored on CUSTOMER to simplify recurring rentals in the coursework/demo model.
+9. **Trip Audit Trail**: Lifecycle events store who did what and when for reserved, canceled, no-show, picked-up, opened, returned, and billed steps.
+10. **Entity Audit Trail**: Governed staff/admin creates, updates, and deletes write `ENTITY_AUDIT_EVENT` rows with actor, timestamp, action, entity type/id, and notes.
+11. **Payment Info**: Stored on CUSTOMER to simplify recurring rentals in the coursework/demo model.
