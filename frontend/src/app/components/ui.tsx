@@ -27,11 +27,33 @@ export function SectionCard({
 }
 
 export function AlertStrip({ error, success }: { error?: string; success?: string }) {
+  const notifications = [
+    ...(error ? [{ id: "error", tone: "error", title: "Action needed", message: error }] : []),
+    ...(success ? [{ id: "success", tone: "success", title: "Update saved", message: success }] : []),
+  ];
+
+  if (!notifications.length) {
+    return null;
+  }
+
   return (
-    <>
-      {error ? <div className="banner error">{error}</div> : null}
-      {success ? <div className="banner success">{success}</div> : null}
-    </>
+    <div className="notification-stack" aria-live="polite">
+      {notifications.map((notification) => (
+        <div
+          key={notification.id}
+          className={`notification-banner ${notification.tone}`}
+          role={notification.tone === "error" ? "alert" : "status"}
+        >
+          <div className="notification-icon" aria-hidden="true">
+            {notification.tone === "error" ? "!" : "OK"}
+          </div>
+          <div>
+            <strong>{notification.title}</strong>
+            <p>{notification.message}</p>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 

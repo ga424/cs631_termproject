@@ -536,7 +536,6 @@ select {
   margin-top: 14px;
 }
 
-.banner,
 .loading-strip,
 .empty-block,
 .identity-card {
@@ -544,17 +543,51 @@ select {
   padding: 12px 14px;
 }
 
-.banner {
-  font-weight: 700;
+.notification-stack {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 2px;
 }
 
-.banner.error {
+.notification-banner {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 13px 14px;
+  border-radius: 16px;
+  box-shadow: 0 14px 34px -28px rgba(19, 32, 51, 0.85);
+}
+
+.notification-banner strong,
+.notification-banner p {
+  margin: 0;
+}
+
+.notification-banner p {
+  margin-top: 3px;
+  color: inherit;
+  line-height: 1.35;
+}
+
+.notification-icon {
+  min-width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.notification-banner.error {
   background: var(--danger-soft);
   color: #8a1c16;
   border: 1px solid #f3b2ad;
 }
 
-.banner.success {
+.notification-banner.success {
   background: #ecfdf5;
   color: #10634f;
   border: 1px solid #9ae6cf;
