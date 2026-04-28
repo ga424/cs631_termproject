@@ -188,6 +188,7 @@ const vehicleOptionSchema = z.object({
   upgrade_badge: z.string().nullable(),
   available_count: z.number().int().nonnegative(),
   is_available: z.boolean(),
+  available_location_ids: z.array(z.string().min(1)).default([]),
 });
 
 export const rentalLifecycleEventSchema = z.object({

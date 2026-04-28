@@ -456,6 +456,7 @@ class CustomerPortalCatalog(BaseModel):
         upgrade_badge: Optional[str] = None
         available_count: int
         is_available: bool
+        available_location_ids: list[UUID] = []
 
     locations: list[Location]
     car_classes: list[CarClass]

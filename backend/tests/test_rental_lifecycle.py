@@ -245,3 +245,101 @@ def test_return_accepts_timezone_aware_closeout_datetime():
         assert response.json()["rental_end_date_time"]
     finally:
         app.dependency_overrides.clear()
+
+
+def test_fulfilled_reservation_operational_fields_are_frozen():
+    override, _SessionLocal, ids = _override_lifecycle_db()
+    app.dependency_overrides[get_db] = override
+    try:
+        client = TestClient(app)
+        agent_headers = auth_headers(client, username="agent", password="agent123")
+        start_response = client.post(
+            "/api/v1/rental-agreements",
+            json={
+                "reservation_id": str(ids["reservation_id"]),
+                "vin": ids["vin"],
+                "rental_start_date_time": datetime.utcnow().replace(microsecond=0).isoformat(),
+            },
+            headers=agent_headers,
+        )
+        assert start_response.status_code == 201
+
+        response = client.put(
+            f"/api/v1/reservations/{ids['reservation_id']}",
+            json={"reservation_status": "CANCELED"},
+            headers=agent_headers,
+        )
+
+        assert response.status_code == 409
+        assert "cannot change" in response.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_repeat_closeout_is_rejected_after_rental_is_closed():
+    override, _SessionLocal, ids = _override_lifecycle_db()
+    app.dependency_overrides[get_db] = override
+    try:
+        client = TestClient(app)
+        agent_headers = auth_headers(client, username="agent", password="agent123")
+        start_response = client.post(
+            "/api/v1/rental-agreements",
+            json={
+                "reservation_id": str(ids["reservation_id"]),
+                "vin": ids["vin"],
+                "rental_start_date_time": datetime.utcnow().replace(microsecond=0).isoformat(),
+            },
+            headers=agent_headers,
+        )
+        assert start_response.status_code == 201
+        contract_no = start_response.json()["contract_no"]
+
+        close_payload = {
+            "rental_end_date_time": (datetime.utcnow().replace(microsecond=0) + timedelta(hours=4)).isoformat(),
+            "end_odometer_reading": ids["start_odometer"] + 25,
+        }
+        first_close = client.put(
+            f"/api/v1/rental-agreements/{contract_no}",
+            json=close_payload,
+            headers=agent_headers,
+        )
+        assert first_close.status_code == 200
+
+        second_close = client.put(
+            f"/api/v1/rental-agreements/{contract_no}",
+            json={**close_payload, "end_odometer_reading": ids["start_odometer"] + 30},
+            headers=agent_headers,
+        )
+        assert second_close.status_code == 409
+        assert "already closed" in second_close.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_rental_delete_is_admin_only_and_blocked_when_lifecycle_exists():
+    override, _SessionLocal, ids = _override_lifecycle_db()
+    app.dependency_overrides[get_db] = override
+    try:
+        client = TestClient(app)
+        agent_headers = auth_headers(client, username="agent", password="agent123")
+        start_response = client.post(
+            "/api/v1/rental-agreements",
+            json={
+                "reservation_id": str(ids["reservation_id"]),
+                "vin": ids["vin"],
+                "rental_start_date_time": datetime.utcnow().replace(microsecond=0).isoformat(),
+            },
+            headers=agent_headers,
+        )
+        assert start_response.status_code == 201
+        contract_no = start_response.json()["contract_no"]
+
+        agent_delete = client.delete(f"/api/v1/rental-agreements/{contract_no}", headers=agent_headers)
+        assert agent_delete.status_code == 403
+
+        admin_headers = auth_headers(client, username="admin", password="admin123")
+        admin_delete = client.delete(f"/api/v1/rental-agreements/{contract_no}", headers=admin_headers)
+        assert admin_delete.status_code == 409
+        assert "lifecycle history" in admin_delete.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()

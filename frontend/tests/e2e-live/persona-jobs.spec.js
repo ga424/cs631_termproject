@@ -138,10 +138,7 @@ test("agent can intake, start pickup, and close a rental", async ({ page }) => {
 
   await page.getByRole("button", { name: /^pickup$/i }).click();
   const hasPickupPath = await selectFirstPickupPair(page);
-  if (!hasPickupPath) {
-    await expect(page.getByRole("combobox").nth(1).locator("option")).toHaveCount(1);
-    return;
-  }
+  expect(hasPickupPath, "Expected seeded fleet capacity to provide an assignable pickup vehicle").toBeTruthy();
 
   await page.getByLabel("Rental start").fill(futureLocalDateTime(15));
   await page.getByRole("button", { name: /start rental/i }).click();

@@ -213,6 +213,7 @@ export type CustomerPortalCatalog = {
     upgrade_badge: string | null;
     available_count: number;
     is_available: boolean;
+    available_location_ids: string[];
   }[];
   workflow: WorkflowStage[];
 };

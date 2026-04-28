@@ -1,13 +1,16 @@
 """Customer-facing mobile portal endpoints."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from uuid import UUID
 
+from app.core.availability import has_capacity, to_naive_utc
+from app.core.db_errors import conflict_from_integrity_error
 from app.core.lifecycle import record_lifecycle_event
 from app.core.security import StaffPrincipal, require_authenticated, require_customer, require_staff
 from app.db.session import get_db
-from app.models.models import Car, CarClass, Customer, Location, RentalAgreement, RentalLifecycleEvent, Reservation
+from app.models.models import Car, CarClass, Customer, CustomerAccount, Location, RentalAgreement, RentalLifecycleEvent, Reservation
 from app.schemas import (
     CustomerPortalBookingRequest,
     CustomerPortalBookingResponse,
@@ -86,6 +89,27 @@ CATALOG_CAPACITY = {
 }
 
 
+def require_active_customer_account(
+    current_user: StaffPrincipal = Depends(require_customer),
+    db: Session = Depends(get_db),
+) -> StaffPrincipal:
+    """Require a customer token whose backing account is still active."""
+    account = None
+    if current_user.account_id is not None:
+        account = (
+            db.query(CustomerAccount)
+            .filter(
+                CustomerAccount.account_id == current_user.account_id,
+                CustomerAccount.customer_id == current_user.customer_id,
+                CustomerAccount.is_active.is_(True),
+            )
+            .first()
+        )
+    if account is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Customer account is inactive")
+    return current_user
+
+
 @router.get("/catalog", response_model=CustomerPortalCatalog)
 def get_customer_catalog(db: Session = Depends(get_db)):
     car_classes = db.query(CarClass).all()
@@ -103,7 +127,9 @@ def get_customer_catalog(db: Session = Depends(get_db)):
             .filter_by(class_id=car_class.class_id)
             .all()
         )
-        available_count = sum(1 for car in cars_for_class if car.vin not in active_vins)
+        available_cars = [car for car in cars_for_class if car.vin not in active_vins]
+        available_count = len(available_cars)
+        available_location_ids = sorted({car.location_id for car in available_cars}, key=str)
         options.append(
             CustomerPortalCatalog.CustomerPortalVehicleOption(
                 class_id=car_class.class_id,
@@ -118,6 +144,7 @@ def get_customer_catalog(db: Session = Depends(get_db)):
                 upgrade_badge="Free Upgrade Eligible" if car_class.class_name in {"Full-Size", "Intermediate", "Standard"} else None,
                 available_count=available_count,
                 is_available=available_count > 0,
+                available_location_ids=available_location_ids,
             )
         )
     options.sort(key=lambda item: (not item.is_available, item.daily_rate, item.class_name))
@@ -133,7 +160,7 @@ def get_customer_catalog(db: Session = Depends(get_db)):
 @router.post("/bookings", response_model=CustomerPortalBookingResponse, status_code=status.HTTP_201_CREATED)
 def create_customer_booking(
     payload: CustomerPortalBookingRequest,
-    current_user: StaffPrincipal = Depends(require_customer),
+    current_user: StaffPrincipal = Depends(require_active_customer_account),
     db: Session = Depends(get_db),
 ):
     customer = db.query(Customer).filter(Customer.customer_id == current_user.customer_id).first()
@@ -164,25 +191,43 @@ def create_customer_booking(
     ]:
         setattr(customer, field, getattr(payload, field))
 
+    pickup = to_naive_utc(payload.pickup_date_time)
+    requested_return = to_naive_utc(payload.return_date_time_requested)
+    if not has_capacity(
+        db,
+        location_id=payload.location_id,
+        class_id=payload.class_id,
+        pickup=pickup,
+        requested_return=requested_return,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="No available cars for the requested branch, class, and time window",
+        )
+
     reservation = Reservation(
         customer_id=customer.customer_id,
         location_id=payload.location_id,
         return_location_id=payload.return_location_id or payload.location_id,
         class_id=payload.class_id,
-        pickup_date_time=payload.pickup_date_time,
-        return_date_time_requested=payload.return_date_time_requested,
+        pickup_date_time=pickup,
+        return_date_time_requested=requested_return,
         reservation_status="ACTIVE",
     )
     db.add(reservation)
-    db.flush()
-    record_lifecycle_event(
-        db,
-        reservation=reservation,
-        event_type="RESERVED",
-        actor=current_user,
-        notes="Reservation created from customer portal.",
-    )
-    db.commit()
+    try:
+        db.flush()
+        record_lifecycle_event(
+            db,
+            reservation=reservation,
+            event_type="RESERVED",
+            actor=current_user,
+            notes="Reservation created from customer portal.",
+        )
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise conflict_from_integrity_error(exc, "Reservation could not be created") from exc
     db.refresh(customer)
     db.refresh(reservation)
     return CustomerPortalBookingResponse(customer_id=customer.customer_id, reservation=reservation)
@@ -225,7 +270,7 @@ def _build_customer_summary(customer_id: UUID, db: Session) -> CustomerPortalSum
 
 @router.get("/me", response_model=CustomerPortalSummary)
 def get_my_customer_summary(
-    current_user: StaffPrincipal = Depends(require_customer),
+    current_user: StaffPrincipal = Depends(require_active_customer_account),
     db: Session = Depends(get_db),
 ):
     return _build_customer_summary(current_user.customer_id, db)
@@ -239,6 +284,20 @@ def get_customer_summary(
 ):
     if current_user.role == "customer" and current_user.customer_id != customer_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot access another customer account")
+    if current_user.role == "customer":
+        account = None
+        if current_user.account_id is not None:
+            account = (
+                db.query(CustomerAccount)
+                .filter(
+                    CustomerAccount.account_id == current_user.account_id,
+                    CustomerAccount.customer_id == current_user.customer_id,
+                    CustomerAccount.is_active.is_(True),
+                )
+                .first()
+            )
+        if account is None:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Customer account is inactive")
     if current_user.role != "customer":
         require_staff(current_user)
     return _build_customer_summary(customer_id, db)

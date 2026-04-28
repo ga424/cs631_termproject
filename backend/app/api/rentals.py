@@ -2,14 +2,14 @@
 
 import math
 
-from datetime import timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
+from app.core.availability import to_naive_utc
 from app.core.lifecycle import record_lifecycle_event
-from app.core.security import StaffPrincipal, require_staff
+from app.core.security import StaffPrincipal, require_admin, require_staff
 from app.db.session import get_db
-from app.models.models import Car, RentalAgreement, Reservation
+from app.models.models import Car, RentalAgreement, RentalLifecycleEvent, Reservation
 from app.schemas import RentalAgreement as RentalAgreementSchema, RentalAgreementCreate, RentalAgreementUpdate
 
 router = APIRouter(prefix="/api/v1/rental-agreements", tags=["rental-agreements"], dependencies=[Depends(require_staff)])
@@ -43,12 +43,6 @@ def _calculate_rental_cost(total_days: int, daily_rate: float, weekly_rate: floa
     return round(best_cost, 2)
 
 
-def _to_naive_utc(value):
-    if value is None or value.tzinfo is None:
-        return value
-    return value.astimezone(timezone.utc).replace(tzinfo=None)
-
-
 @router.get("", response_model=list[RentalAgreementSchema])
 def list_rental_agreements(db: Session = Depends(get_db)):
     """List all rental agreements"""
@@ -72,7 +66,7 @@ def create_rental_agreement(
     db: Session = Depends(get_db),
 ):
     """Create a new rental agreement"""
-    rental_start = _to_naive_utc(agreement.rental_start_date_time)
+    rental_start = to_naive_utc(agreement.rental_start_date_time)
     reservation = (
         db.query(Reservation)
         .filter(Reservation.reservation_id == agreement.reservation_id)
@@ -183,9 +177,19 @@ def update_rental_agreement(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rental agreement not found")
     
     update_data = agreement.dict(exclude_unset=True)
+    if db_agreement.rental_end_date_time is not None and update_data:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Rental agreement is already closed; corrections require an administrative workflow",
+        )
 
     if "rental_end_date_time" in update_data:
-        update_data["rental_end_date_time"] = _to_naive_utc(update_data["rental_end_date_time"])
+        update_data["rental_end_date_time"] = to_naive_utc(update_data["rental_end_date_time"])
+    elif any(field in update_data for field in {"end_odometer_reading", "actual_cost"}):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="rental_end_date_time is required when closing or billing a rental agreement",
+        )
 
     rental_end = update_data.get("rental_end_date_time", db_agreement.rental_end_date_time)
     end_odometer = update_data.get("end_odometer_reading", db_agreement.end_odometer_reading)
@@ -258,11 +262,29 @@ def update_rental_agreement(
 
 
 @router.delete("/{contract_no}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_rental_agreement(contract_no: UUID, db: Session = Depends(get_db)):
-    """Delete a rental agreement"""
+def delete_rental_agreement(
+    contract_no: UUID,
+    _current_user: StaffPrincipal = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Delete a rental agreement only before lifecycle events exist."""
     db_agreement = db.query(RentalAgreement).filter(RentalAgreement.contract_no == contract_no).first()
     if not db_agreement:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rental agreement not found")
+
+    lifecycle_event_count = (
+        db.query(RentalLifecycleEvent)
+        .filter(RentalLifecycleEvent.contract_no == contract_no)
+        .count()
+    )
+    if lifecycle_event_count:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Rental agreement has lifecycle history and cannot be deleted",
+        )
+
+    if db_agreement.reservation:
+        db_agreement.reservation.reservation_status = "ACTIVE"
     
     db.delete(db_agreement)
     db.commit()
