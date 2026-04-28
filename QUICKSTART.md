@@ -223,6 +223,7 @@ Use the admin console in this order:
 The model dropdown is grouped by class because cars inherit their reservation/pricing class through the selected model. If a duplicate class/model/VIN or missing relationship is submitted, the API returns a `409 Conflict` with a clear relationship error.
 
 Admin grid edits and create/delete actions display notification banners for success or errors. Successful governed changes are written to `entity_audit_event`; review them in the Admin Ops tab under **Entity Audit Trail** or through `GET /api/v1/audit-events`.
+When a create/edit request fails (for example a `409 Conflict`), forms stay open so entered values can be corrected and resubmitted.
 
 ### Customers (5 Total)
 - John Doe (NY)
@@ -261,12 +262,20 @@ Seeded customer login usernames are generated as lowercase first/last names, for
 - **Dashboard**: `/api/v1/dashboard/overview`
 - **Entity Audit Events**: `/api/v1/audit-events` (admin only)
 
-### All Resources Support
-- `GET /resource` - List all
-- `GET /resource/{id}` - Get one
-- `POST /resource` - Create
-- `PUT /resource/{id}` - Update
-- `DELETE /resource/{id}` - Delete
+### Common Resource Patterns
+- Most resources support `GET /resource`, `GET /resource/{id}`, `POST /resource`, and `PUT /resource/{id}`.
+- Delete behavior is resource-specific and can be role/constraint restricted.
+- `DELETE /api/v1/rental-agreements/{contract_no}` is admin-only and returns `409 Conflict` when lifecycle history exists.
+
+### Reservation And Rental Guardrails
+- Reservation creation/update enforces branch + class + time-window capacity.
+- Overlapping requests without remaining capacity return `409 Conflict` with `No available cars for the requested branch, class, and time window`.
+- Reservations with an existing rental agreement cannot change customer, branch, class, dates, or status.
+- Closed rentals reject repeat closeout mutations.
+
+### Customer Account Guardrails
+- Staff usernames are reserved; customer signup/account creation rejects username collisions with staff personas.
+- Customer portal endpoints (`/api/v1/customer-portal/*`) require the backing customer account to remain active.
 
 ## Troubleshooting
 

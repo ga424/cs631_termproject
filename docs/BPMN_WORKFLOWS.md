@@ -6,7 +6,9 @@ This document captures the mobile-first workflow model that now drives the role-
 
 ```mermaid
 flowchart TD
-    A[Customer books reservation] --> A1[Audit event: RESERVED]
+    A[Customer books reservation] --> A0{Branch/class/time capacity available}
+    A0 -->|No| A2[Reject booking with 409 conflict]
+    A0 -->|Yes| A1[Audit event: RESERVED]
     A1 --> B[Reservation active]
     B --> C{Pickup window reached}
     C -->|Arrives| D[Agent verifies customer]
@@ -50,3 +52,5 @@ flowchart TD
 - Rental Admins review `entity_audit_event` history for governed create, update, and delete actions made through grids and CRUD forms.
 - Pickup assignment dropdowns show only cars that are available, in the reservation pickup branch, and in the requested class.
 - Customer trip cards show lifecycle drilldowns from `rental_lifecycle_event`, including actor and timestamp.
+- Reservations with an existing rental agreement cannot change customer, branch, class, dates, or status.
+- Closed rentals reject repeat closeout updates; rental deletion is admin-only and blocked when lifecycle history exists.

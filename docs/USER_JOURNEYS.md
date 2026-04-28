@@ -18,6 +18,10 @@ This document maps user workflows directly to the official CS631 RentACar requir
 
 Inactive no-booking customer accounts are visible for demo context but cannot log in. All `/api/v1/*` operational resources require `Authorization: Bearer <jwt>` except `/api/v1/auth/login`, `/api/v1/auth/customer-signup`, `/api/v1/auth/demo-customers`, `/`, `/health`, `/docs`, and `/api/v1`.
 
+Additional authentication guardrails:
+- Customer usernames colliding with staff usernames are rejected during signup and admin account creation.
+- Customer-portal endpoints re-check the backing `customer_account` activity state and deny deactivated accounts.
+
 ## Journey Views (Diagrams)
 
 ### End-To-End Journey Flow
@@ -86,8 +90,10 @@ stateDiagram-v2
 ### Steps
 1. Service representative captures customer identity and address.
 2. Representative captures rental period and desired class.
-3. System stores reservation in `reservation` with status `ACTIVE` and keeps return location separate from pickup location.
-4. Customer is informed of daily/weekly class rates.
+3. System validates branch/class/time-window capacity before storing an `ACTIVE` reservation.
+4. If capacity is unavailable, the API returns a `409 Conflict` response.
+5. System stores reservation in `reservation` with status `ACTIVE` and keeps return location separate from pickup location.
+6. Customer is informed of daily/weekly class rates.
 
 ### Core Data
 - `customer`, `location`, `car_class`, `reservation`
@@ -127,6 +133,7 @@ stateDiagram-v2
 3. The pickup odometer is confirmed from the selected car's stored `current_odometer_reading`.
 4. Rental agreement is created, reservation becomes `FULFILLED`, and customer receives copy/keys.
 5. Lifecycle audit events record who picked up and opened the rental, and when.
+6. Once a reservation has a rental agreement, customer/branch/class/date/status edits are blocked.
 
 ### Core Data
 - `reservation`, `car`, `rental_agreement`
@@ -166,6 +173,7 @@ stateDiagram-v2
 4. Billing is posted to customer credit card.
 5. Car `current_odometer_reading` is updated to the submitted return odometer.
 6. Lifecycle audit events record return and billing actor/timestamp details.
+7. Repeat closeout attempts against an already-closed rental agreement are rejected.
 
 ### Core Data
 - `rental_agreement`, `reservation`, `car_class`, `customer`

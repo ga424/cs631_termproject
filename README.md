@@ -123,6 +123,8 @@ A containerized rental car management system built with FastAPI, PostgreSQL, and
    - Manager: `manager` / `manager123`
    - Admin: `admin` / `admin123`
    - Seeded customer accounts are DB-backed and linked 1:1 to customer records. Inactive no-booking demo accounts are visible in the dropdown for account-state demos but cannot log in. Staff demo accounts remain environment-backed.
+   - Customer usernames that collide with staff usernames (for example `admin`, `agent`, `manager`) are reserved and rejected during signup/account creation.
+   - Customer-portal endpoints re-check account activity; deactivated accounts are denied portal access even if they hold an older token.
    - These are development/demo credentials only. The login response is a JWT bearer token used by the frontend for protected `/api/v1/*` endpoints.
 
 7. **Seed Sample Data** (optional, for testing)
@@ -240,6 +242,8 @@ Authorization: Bearer {access_token}
 }
 ```
 
+Reservation creation now enforces branch + class + time-window capacity. If no assignable car remains for that window, the API returns `409 Conflict` with `No available cars for the requested branch, class, and time window`.
+
 #### Create a Rental Agreement
 ```bash
 POST http://localhost:8000/api/v1/rental-agreements
@@ -254,6 +258,11 @@ Authorization: Bearer {access_token}
 ```
 
 The pickup odometer is derived by the API from the selected car's current odometer. If a client sends a stale or mismatched pickup odometer, the API rejects it. At return, submit only the new end odometer and optional actual cost override.
+
+Additional lifecycle guardrails:
+- Reservations that already produced a rental agreement cannot change customer, branch, class, dates, or status.
+- Closed rentals reject repeat closeout updates.
+- `DELETE /api/v1/rental-agreements/{contract_no}` is admin-only and blocked when lifecycle history exists.
 
 ### Using cURL
 
@@ -581,6 +590,7 @@ For visual workflow and architecture references:
 - `docs/DATABASE_ERD.md` (entity relationship model)
 - `docs/USER_JOURNEYS.md` (user journey flowchart, sequence, and lifecycle diagrams)
 - `docs/BPMN_WORKFLOWS.md` (mobile-first workflow mapping between roles, UI surfaces, and API touchpoints)
+- `docs/QA_BUG_BACKLOG.md` (QA defects, remediation status, and verification evidence)
 
 ## User Journey Mapping
 
