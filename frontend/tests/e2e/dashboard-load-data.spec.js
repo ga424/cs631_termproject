@@ -85,6 +85,17 @@ const testCustomerAccount = {
   updated_at: "2026-04-25T00:00:00"
 };
 
+const testAuditEvent = {
+  event_id: "00000000-0000-0000-0000-000000000901",
+  entity_type: "location",
+  entity_id: testLocation.location_id,
+  action: "UPDATED",
+  actor_role: "admin",
+  actor_username: "admin",
+  event_timestamp: "2026-04-25T12:00:00",
+  notes: "Updated location fields: city."
+};
+
 async function signInAs(page, role, overrides = {}) {
   const catalogPayload = overrides.catalogPayload || {
     locations: [],
@@ -182,6 +193,9 @@ async function signInAs(page, role, overrides = {}) {
   await page.route("**/api/v1/rental-agreements", async (route) => {
     await route.fulfill({ contentType: "application/json", body: JSON.stringify([]) });
   });
+  await page.route("**/api/v1/audit-events**", async (route) => {
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify([testAuditEvent]) });
+  });
   await page.route("**/api/v1/**", async (route) => {
     const url = route.request().url();
     if (
@@ -197,7 +211,8 @@ async function signInAs(page, role, overrides = {}) {
       url.includes("/api/v1/models") ||
       url.includes("/api/v1/cars") ||
       url.includes("/api/v1/reservations") ||
-      url.includes("/api/v1/rental-agreements")
+      url.includes("/api/v1/rental-agreements") ||
+      url.includes("/api/v1/audit-events")
     ) {
       await route.fallback();
       return;
@@ -259,6 +274,8 @@ test("admin sees the mobile-first admin console with fleet and pricing tabs", as
   await expect(page.getByRole("button", { name: /^fleet$/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /^pricing$/i })).toBeVisible();
   await expect(page.getByText("Operational Health")).toBeVisible();
+  await expect(page.getByText("Entity Audit Trail")).toBeVisible();
+  await expect(page.getByText("Updated location fields: city.")).toBeVisible();
 });
 
 test("admin data grids organize customers reservations cars and locations", async ({ page }) => {

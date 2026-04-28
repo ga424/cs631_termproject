@@ -123,6 +123,17 @@ export type RentalLifecycleEvent = {
   notes: string | null;
 };
 
+export type EntityAuditEvent = {
+  event_id: string;
+  entity_type: string;
+  entity_id: string;
+  action: "CREATED" | "UPDATED" | "DELETED";
+  actor_role: string;
+  actor_username: string;
+  event_timestamp: string;
+  notes: string | null;
+};
+
 export type DashboardTotals = {
   total_cars: number;
   available_cars: number;

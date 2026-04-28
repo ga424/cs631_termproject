@@ -5,7 +5,7 @@ import { useStaffData } from "../../hooks/useStaffData";
 import { MobileLayout } from "../../components/MobileLayout";
 import { AlertStrip } from "../../components/ui";
 import { api } from "../../lib/api";
-import type { CustomerAccountAdmin } from "../../lib/types";
+import type { CustomerAccountAdmin, EntityAuditEvent } from "../../lib/types";
 import { OpsTab } from "./OpsTab";
 import { FleetTab } from "./FleetTab";
 import { PricingTab } from "./PricingTab";
@@ -34,6 +34,7 @@ export function AdminConsole() {
   const [carForm, setCarForm] = useState({ vin: "", current_odometer_reading: "", location_id: "", model_name: "" });
   const [accounts, setAccounts] = useState<CustomerAccountAdmin[]>([]);
   const [accountsLoading, setAccountsLoading] = useState(false);
+  const [auditEvents, setAuditEvents] = useState<EntityAuditEvent[]>([]);
 
   const reloadAccounts = useCallback(async () => {
     setAccountsLoading(true);
@@ -47,9 +48,24 @@ export function AdminConsole() {
     }
   }, []);
 
+  const reloadAuditEvents = useCallback(async () => {
+    try {
+      setAuditEvents(await api.listAuditEvents(100));
+    } catch {
+      setAuditEvents([]);
+    }
+  }, []);
+
   useEffect(() => {
     void reloadAccounts();
-  }, [reloadAccounts]);
+    void reloadAuditEvents();
+  }, [reloadAccounts, reloadAuditEvents]);
+
+  useEffect(() => {
+    if (staff.success) {
+      void reloadAuditEvents();
+    }
+  }, [reloadAuditEvents, staff.success]);
 
   async function createLocation(event: React.FormEvent) {
     event.preventDefault();
@@ -121,7 +137,7 @@ export function AdminConsole() {
     >
       <AlertStrip error={staff.error} success={staff.success} />
       {staff.loading ? <div className="loading-strip">Syncing admin controls…</div> : null}
-      {activeTab === "operations" ? <OpsTab staff={staff} /> : null}
+      {activeTab === "operations" ? <OpsTab staff={staff} auditEvents={auditEvents} /> : null}
       {activeTab === "users" ? (
         <AdminUsersTab
           staff={staff}

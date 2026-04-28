@@ -3,8 +3,8 @@ import type { ColDef } from "ag-grid-community";
 import { AdminDataGrid } from "../../components/AdminDataGrid";
 import { SectionCard, StatGrid } from "../../components/ui";
 import type { StaffData } from "../../hooks/useStaffData";
-import { formatPercent } from "../../lib/api";
-import type { DashboardFleetItem, DashboardLocationSummary } from "../../lib/types";
+import { formatDateTime, formatPercent } from "../../lib/api";
+import type { DashboardFleetItem, DashboardLocationSummary, EntityAuditEvent } from "../../lib/types";
 
 type WatchlistRow = {
   id: string;
@@ -13,7 +13,7 @@ type WatchlistRow = {
   meta: string;
 };
 
-export function OpsTab({ staff }: { staff: StaffData }) {
+export function OpsTab({ staff, auditEvents }: { staff: StaffData; auditEvents: EntityAuditEvent[] }) {
   const fleetByLocation = staff.dashboard?.locations || [];
   const fleetStatusItems = staff.dashboard?.fleet || [];
   const watchlistItems = staff.managerAlerts.slice(0, 12);
@@ -40,6 +40,16 @@ export function OpsTab({ staff }: { staff: StaffData }) {
     { field: "title", headerName: "Issue", minWidth: 240 },
     { field: "subtitle", headerName: "Context", minWidth: 220 },
     { field: "meta", headerName: "Due / Status", minWidth: 180 },
+  ]), []);
+
+  const auditColumns = useMemo<ColDef<EntityAuditEvent>[]>(() => ([
+    { field: "event_timestamp", headerName: "When", valueFormatter: (params) => formatDateTime(String(params.value || "")), minWidth: 190 },
+    { field: "actor_username", headerName: "Who", minWidth: 160 },
+    { field: "actor_role", headerName: "Role", minWidth: 120 },
+    { field: "action", headerName: "Action", minWidth: 130 },
+    { field: "entity_type", headerName: "Entity", minWidth: 150 },
+    { field: "entity_id", headerName: "Entity ID", minWidth: 220 },
+    { field: "notes", headerName: "Details", valueFormatter: (params) => params.value || "-", minWidth: 260 },
   ]), []);
 
   return (
@@ -70,6 +80,15 @@ export function OpsTab({ staff }: { staff: StaffData }) {
           getRowId={(item) => item.id}
           emptyText="No elevated branch issues."
           height={320}
+        />
+      </SectionCard>
+      <SectionCard title="Entity Audit Trail" subtitle="Recent creates, updates, and deletes with actor, timestamp, entity, and details.">
+        <AdminDataGrid
+          rows={auditEvents}
+          columns={auditColumns}
+          getRowId={(item) => item.event_id}
+          emptyText="No entity audit events recorded yet."
+          height={430}
         />
       </SectionCard>
     </>

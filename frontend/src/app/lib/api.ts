@@ -15,6 +15,7 @@ import {
   customersSchema,
   dashboardOverviewSchema,
   demoCustomersSchema,
+  entityAuditEventsSchema,
   locationSchema,
   locationsSchema,
   modelSchema,
@@ -36,6 +37,7 @@ import type {
   CustomerPortalSummary,
   CustomerSignupRequest,
   DashboardOverview,
+  EntityAuditEvent,
   Location,
   LoginRequest,
   Model,
@@ -168,6 +170,9 @@ export const api = {
   },
   getDashboardOverview() {
     return apiRequest<DashboardOverview>("/api/v1/dashboard/overview", {}, dashboardOverviewSchema);
+  },
+  listAuditEvents(limit = 100) {
+    return apiRequest<EntityAuditEvent[]>(`/api/v1/audit-events?limit=${limit}`, {}, entityAuditEventsSchema);
   },
   createCustomer(payload: Omit<Customer, "customer_id">) {
     return apiRequest<Customer>("/api/v1/customers", { method: "POST", body: JSON.stringify(payload) }, customerSchema);

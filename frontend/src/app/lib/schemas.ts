@@ -202,6 +202,17 @@ export const rentalLifecycleEventSchema = z.object({
   notes: z.string().nullable(),
 });
 
+export const entityAuditEventSchema = z.object({
+  event_id: z.string().min(1),
+  entity_type: z.string().min(1),
+  entity_id: z.string().min(1),
+  action: z.enum(["CREATED", "UPDATED", "DELETED"]),
+  actor_role: z.string().min(1),
+  actor_username: z.string().min(1),
+  event_timestamp: z.string().min(1),
+  notes: z.string().nullable(),
+});
+
 export const customerPortalCatalogSchema = z.object({
   locations: z.array(locationSchema),
   car_classes: z.array(carClassSchema),
@@ -232,3 +243,4 @@ export const reservationsSchema = z.array(reservationSchema);
 export const rentalAgreementsSchema = z.array(rentalAgreementSchema);
 export const demoCustomersSchema = z.array(customerDemoAccountSchema);
 export const customerAccountAdminsSchema = z.array(customerAccountAdminSchema);
+export const entityAuditEventsSchema = z.array(entityAuditEventSchema);
