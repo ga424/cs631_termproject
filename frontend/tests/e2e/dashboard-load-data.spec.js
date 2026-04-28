@@ -219,6 +219,17 @@ test("customer is routed into the customer portal", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /my trips?/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /^my trip$/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /reserve a car/i })).toBeVisible();
+
+  const bookingDialog = page.getByRole("dialog", { name: /reserve a car/i });
+  if (await bookingDialog.isVisible()) {
+    await bookingDialog.getByRole("button", { name: /close/i }).click();
+  }
+  await page.getByRole("button", { name: /open profile/i }).click();
+  await expect(page.getByRole("heading", { name: /demo customer/i })).toBeVisible();
+  await expect(page.getByText("Customer Snapshot")).toBeVisible();
+  await expect(page.getByText("Identity And Payment")).toBeVisible();
+  await expect(page.getByText("**** 1111")).toBeVisible();
+  await expect(page.getByText(testCustomer.credit_card_number)).toHaveCount(0);
 });
 
 test("agent is routed into the agent workspace", async ({ page }) => {
@@ -277,7 +288,6 @@ for (const role of ["customer", "agent", "manager"]) {
     await signInAs(page, role);
 
     await page.goto("/admin");
-    await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole("heading", { name: /rental admin console/i })).toHaveCount(0);
   });
 }

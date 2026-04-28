@@ -1033,6 +1033,7 @@ select {
   align-content: start;
   gap: 16px;
   padding: 18px;
+  overflow-y: auto;
   background: var(--surface);
   box-shadow: -24px 0 60px -40px rgba(19, 32, 51, 0.9);
 }
@@ -1095,6 +1096,12 @@ select {
   margin: 0;
   text-align: right;
   font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.profile-section p {
+  margin: 8px 0 0;
+  line-height: 1.45;
 }
 
 .full-width {

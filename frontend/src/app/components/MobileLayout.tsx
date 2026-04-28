@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { BottomNav, type BottomNavItem } from "./BottomNav";
-import { ProfileDrawer } from "./ProfileDrawer";
+import { ProfileDrawer, type ProfileDrawerSection } from "./ProfileDrawer";
 
 export function MobileLayout({
   title,
@@ -10,6 +10,10 @@ export function MobileLayout({
   activeTab,
   onTabChange,
   onSignOut,
+  profileInitials,
+  profileTitle,
+  profileSubtitle,
+  profileSections,
   children,
 }: {
   title: string;
@@ -19,6 +23,10 @@ export function MobileLayout({
   activeTab: string;
   onTabChange: (id: string) => void;
   onSignOut: () => void;
+  profileInitials?: string;
+  profileTitle?: string;
+  profileSubtitle?: string;
+  profileSections?: ProfileDrawerSection[];
   children: React.ReactNode;
 }) {
   const [profileOpen, setProfileOpen] = useState(false);
@@ -33,7 +41,7 @@ export function MobileLayout({
         </div>
         <div className="hero-actions">
           <button type="button" className="profile-button" aria-label="Open profile" onClick={() => setProfileOpen(true)}>
-            {role.slice(0, 1).toUpperCase()}
+            {profileInitials || role.slice(0, 1).toUpperCase()}
           </button>
           <button type="button" className="ghost-button" onClick={onSignOut}>
             Sign Out
@@ -42,7 +50,14 @@ export function MobileLayout({
       </header>
       <main className="mobile-main">{children}</main>
       <BottomNav items={tabs} activeTab={activeTab} onTabChange={onTabChange} />
-      <ProfileDrawer open={profileOpen} onClose={() => setProfileOpen(false)} />
+      <ProfileDrawer
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        initials={profileInitials}
+        title={profileTitle}
+        subtitle={profileSubtitle}
+        sections={profileSections}
+      />
     </div>
   );
 }
