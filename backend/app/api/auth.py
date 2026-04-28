@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.entity_audit import record_entity_event
 from app.core.security import (
     StaffPrincipal,
     authenticate_staff,
@@ -184,8 +185,12 @@ def list_customer_accounts(db: Session = Depends(get_db)):
     ]
 
 
-@router.post("/customer-accounts", response_model=CustomerAccountAdmin, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_admin)])
-def create_customer_account(payload: CustomerAccountAdminCreate, db: Session = Depends(get_db)):
+@router.post("/customer-accounts", response_model=CustomerAccountAdmin, status_code=status.HTTP_201_CREATED)
+def create_customer_account(
+    payload: CustomerAccountAdminCreate,
+    current_user: StaffPrincipal = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
     username = normalize_username(payload.username)
     if db.query(CustomerAccount).filter(CustomerAccount.username == username).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username is already taken")
@@ -207,6 +212,15 @@ def create_customer_account(payload: CustomerAccountAdminCreate, db: Session = D
     db.add(account)
 
     try:
+        db.flush()
+        record_entity_event(
+            db,
+            actor=current_user,
+            action="CREATED",
+            entity_type="customer_account",
+            entity_id=account.account_id,
+            notes=f"Created customer account {account.username}.",
+        )
         db.commit()
     except IntegrityError as exc:
         db.rollback()
@@ -229,8 +243,13 @@ def create_customer_account(payload: CustomerAccountAdminCreate, db: Session = D
     )
 
 
-@router.put("/customer-accounts/{account_id}", response_model=CustomerAccountAdmin, dependencies=[Depends(require_admin)])
-def update_customer_account(account_id: UUID, payload: CustomerAccountAdminUpdate, db: Session = Depends(get_db)):
+@router.put("/customer-accounts/{account_id}", response_model=CustomerAccountAdmin)
+def update_customer_account(
+    account_id: UUID,
+    payload: CustomerAccountAdminUpdate,
+    current_user: StaffPrincipal = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
     account = db.query(CustomerAccount).filter(CustomerAccount.account_id == account_id).first()
     if account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer account not found")
@@ -286,6 +305,15 @@ def update_customer_account(account_id: UUID, payload: CustomerAccountAdminUpdat
             db.rollback()
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="License number already belongs to a customer")
 
+    record_entity_event(
+        db,
+        actor=current_user,
+        action="UPDATED",
+        entity_type="customer_account",
+        entity_id=account_id,
+        notes=f"Updated customer account fields: {', '.join(update_data.keys()) or 'none'}.",
+    )
+
     try:
         db.commit()
     except IntegrityError as exc:
@@ -309,12 +337,24 @@ def update_customer_account(account_id: UUID, payload: CustomerAccountAdminUpdat
     )
 
 
-@router.delete("/customer-accounts/{account_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin)])
-def delete_customer_account(account_id: UUID, db: Session = Depends(get_db)):
+@router.delete("/customer-accounts/{account_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_customer_account(
+    account_id: UUID,
+    current_user: StaffPrincipal = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
     account = db.query(CustomerAccount).filter(CustomerAccount.account_id == account_id).first()
     if account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer account not found")
 
+    record_entity_event(
+        db,
+        actor=current_user,
+        action="DELETED",
+        entity_type="customer_account",
+        entity_id=account_id,
+        notes=f"Deleted customer account {account.username}.",
+    )
     db.delete(account)
     db.commit()
     return None

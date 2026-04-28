@@ -196,3 +196,20 @@ class RentalLifecycleEvent(Base):
 
     def __repr__(self):
         return f"<RentalLifecycleEvent(type={self.event_type}, reservation={self.reservation_id})>"
+
+
+class EntityAuditEvent(Base):
+    __tablename__ = "entity_audit_event"
+
+    event_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    entity_type = Column(String(80), nullable=False, index=True)
+    entity_id = Column(String(255), nullable=False, index=True)
+    action = Column(String(30), nullable=False, index=True)
+    actor_role = Column(String(50), nullable=False)
+    actor_username = Column(String(80), nullable=False, index=True)
+    event_timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    notes = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f"<EntityAuditEvent(action={self.action}, entity={self.entity_type}:{self.entity_id})>"

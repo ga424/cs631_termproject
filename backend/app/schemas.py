@@ -355,6 +355,20 @@ class RentalLifecycleEvent(BaseModel):
         from_attributes = True
 
 
+class EntityAuditEvent(BaseModel):
+    event_id: UUID
+    entity_type: str
+    entity_id: str
+    action: Literal["CREATED", "UPDATED", "DELETED"]
+    actor_role: str
+    actor_username: str
+    event_timestamp: datetime
+    notes: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 # Dashboard schemas
 class DashboardTotals(BaseModel):
     total_cars: int

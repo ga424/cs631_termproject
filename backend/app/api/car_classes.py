@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from uuid import UUID
-from app.core.security import require_admin, require_staff
+from app.core.entity_audit import record_entity_event
+from app.core.security import StaffPrincipal, require_admin, require_staff
 from app.db.session import get_db
 from app.models.models import CarClass
 from app.schemas import CarClass as CarClassSchema, CarClassCreate, CarClassUpdate
@@ -28,12 +29,25 @@ def get_car_class(class_id: UUID, db: Session = Depends(get_db)):
     return car_class
 
 
-@router.post("", response_model=CarClassSchema, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_admin)])
-def create_car_class(car_class: CarClassCreate, db: Session = Depends(get_db)):
+@router.post("", response_model=CarClassSchema, status_code=status.HTTP_201_CREATED)
+def create_car_class(
+    car_class: CarClassCreate,
+    current_user: StaffPrincipal = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
     """Create a new car class"""
     db_class = CarClass(**car_class.dict())
     db.add(db_class)
     try:
+        db.flush()
+        record_entity_event(
+            db,
+            actor=current_user,
+            action="CREATED",
+            entity_type="car_class",
+            entity_id=db_class.class_id,
+            notes=f"Created class {db_class.class_name}.",
+        )
         db.commit()
     except IntegrityError as exc:
         db.rollback()
@@ -45,8 +59,13 @@ def create_car_class(car_class: CarClassCreate, db: Session = Depends(get_db)):
     return db_class
 
 
-@router.put("/{class_id}", response_model=CarClassSchema, dependencies=[Depends(require_admin)])
-def update_car_class(class_id: UUID, car_class: CarClassUpdate, db: Session = Depends(get_db)):
+@router.put("/{class_id}", response_model=CarClassSchema)
+def update_car_class(
+    class_id: UUID,
+    car_class: CarClassUpdate,
+    current_user: StaffPrincipal = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
     """Update a car class"""
     db_class = db.query(CarClass).filter(CarClass.class_id == class_id).first()
     if not db_class:
@@ -56,20 +75,40 @@ def update_car_class(class_id: UUID, car_class: CarClassUpdate, db: Session = De
     update_data = car_class.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_class, field, value)
+    record_entity_event(
+        db,
+        actor=current_user,
+        action="UPDATED",
+        entity_type="car_class",
+        entity_id=class_id,
+        notes=f"Updated class fields: {', '.join(update_data.keys()) or 'none'}.",
+    )
     
     db.commit()
     db.refresh(db_class)
     return db_class
 
 
-@router.delete("/{class_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin)])
-def delete_car_class(class_id: UUID, db: Session = Depends(get_db)):
+@router.delete("/{class_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_car_class(
+    class_id: UUID,
+    current_user: StaffPrincipal = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
     """Delete a car class"""
     db_class = db.query(CarClass).filter(CarClass.class_id == class_id).first()
     if not db_class:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Car class not found")
     
     try:
+        record_entity_event(
+            db,
+            actor=current_user,
+            action="DELETED",
+            entity_type="car_class",
+            entity_id=class_id,
+            notes=f"Deleted class {db_class.class_name}.",
+        )
         db.delete(db_class)
         db.commit()
     except IntegrityError as exc:

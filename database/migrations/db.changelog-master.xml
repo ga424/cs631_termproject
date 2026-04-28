@@ -23,4 +23,7 @@
     <!-- Track requested return branch separately from pickup branch -->
     <include file="06-add-reservation-return-location.xml" relativeToChangelogFile="true"/>
 
+    <!-- Audit staff/admin entity changes -->
+    <include file="07-add-entity-audit-events.xml" relativeToChangelogFile="true"/>
+
 </databaseChangeLog>

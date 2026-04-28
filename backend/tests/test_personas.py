@@ -309,9 +309,49 @@ def test_customer_persona_cannot_read_staff_admin_datasets():
             "/api/v1/locations",
             "/api/v1/dashboard/overview",
             "/api/v1/auth/customer-accounts",
+            "/api/v1/audit-events",
         ]:
             response = client.get(path, headers=headers)
             assert response.status_code == 403
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_admin_entity_changes_are_written_to_audit_log():
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    def _dependency_override():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = _dependency_override
+    try:
+        client = TestClient(app)
+        headers = auth_headers(client, username="admin", password="admin123")
+        created = client.post(
+            "/api/v1/locations",
+            json={"street": "1 Audit Way", "city": "Newark", "state": "NJ", "zip": "07102"},
+            headers=headers,
+        )
+
+        assert created.status_code == 201
+        events = client.get("/api/v1/audit-events", headers=headers)
+        assert events.status_code == 200
+        payload = events.json()
+        assert payload[0]["entity_type"] == "location"
+        assert payload[0]["entity_id"] == created.json()["location_id"]
+        assert payload[0]["action"] == "CREATED"
+        assert payload[0]["actor_username"] == "admin"
+        assert payload[0]["actor_role"] == "admin"
     finally:
         app.dependency_overrides.clear()
 
@@ -394,5 +434,22 @@ def test_database_changelog_contains_reservation_return_location():
         "return_location_id",
         "fk_reservation_return_location",
         "idx_reservation_return_location_id",
+    ]:
+        assert expected in changelog
+
+
+def test_database_changelog_contains_entity_audit_events():
+    project_root = Path(__file__).resolve().parents[2]
+    changelog_path = project_root / "database/migrations/07-add-entity-audit-events.xml"
+    if not changelog_path.exists():
+        pytest.skip("database migrations directory is not mounted in this test container")
+
+    changelog = changelog_path.read_text()
+
+    for expected in [
+        "entity_audit_event",
+        "actor_username",
+        "event_timestamp",
+        "chk_entity_audit_action",
     ]:
         assert expected in changelog

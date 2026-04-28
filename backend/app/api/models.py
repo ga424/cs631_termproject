@@ -3,7 +3,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from app.core.security import require_admin, require_staff
+from app.core.entity_audit import record_entity_event
+from app.core.security import StaffPrincipal, require_admin, require_staff
 from app.db.session import get_db
 from app.models.models import Model
 from app.schemas import Model as ModelSchema, ModelCreate, ModelUpdate
@@ -27,12 +28,25 @@ def get_model(model_name: str, db: Session = Depends(get_db)):
     return model
 
 
-@router.post("", response_model=ModelSchema, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_admin)])
-def create_model(model: ModelCreate, db: Session = Depends(get_db)):
+@router.post("", response_model=ModelSchema, status_code=status.HTTP_201_CREATED)
+def create_model(
+    model: ModelCreate,
+    current_user: StaffPrincipal = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
     """Create a new model"""
     db_model = Model(**model.dict())
     db.add(db_model)
     try:
+        db.flush()
+        record_entity_event(
+            db,
+            actor=current_user,
+            action="CREATED",
+            entity_type="model",
+            entity_id=db_model.model_name,
+            notes=f"Created model {db_model.make_name} {db_model.model_name}.",
+        )
         db.commit()
     except IntegrityError as exc:
         db.rollback()
@@ -44,8 +58,13 @@ def create_model(model: ModelCreate, db: Session = Depends(get_db)):
     return db_model
 
 
-@router.put("/{model_name}", response_model=ModelSchema, dependencies=[Depends(require_admin)])
-def update_model(model_name: str, model: ModelUpdate, db: Session = Depends(get_db)):
+@router.put("/{model_name}", response_model=ModelSchema)
+def update_model(
+    model_name: str,
+    model: ModelUpdate,
+    current_user: StaffPrincipal = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
     """Update a model"""
     db_model = db.query(Model).filter(Model.model_name == model_name).first()
     if not db_model:
@@ -55,6 +74,14 @@ def update_model(model_name: str, model: ModelUpdate, db: Session = Depends(get_
     update_data = model.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_model, field, value)
+    record_entity_event(
+        db,
+        actor=current_user,
+        action="UPDATED",
+        entity_type="model",
+        entity_id=model_name,
+        notes=f"Updated model fields: {', '.join(update_data.keys()) or 'none'}.",
+    )
     
     try:
         db.commit()
@@ -68,14 +95,26 @@ def update_model(model_name: str, model: ModelUpdate, db: Session = Depends(get_
     return db_model
 
 
-@router.delete("/{model_name}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin)])
-def delete_model(model_name: str, db: Session = Depends(get_db)):
+@router.delete("/{model_name}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_model(
+    model_name: str,
+    current_user: StaffPrincipal = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
     """Delete a model"""
     db_model = db.query(Model).filter(Model.model_name == model_name).first()
     if not db_model:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found")
     
     try:
+        record_entity_event(
+            db,
+            actor=current_user,
+            action="DELETED",
+            entity_type="model",
+            entity_id=model_name,
+            notes=f"Deleted model {db_model.make_name} {db_model.model_name}.",
+        )
         db.delete(db_model)
         db.commit()
     except IntegrityError as exc:

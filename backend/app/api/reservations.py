@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
+from app.core.entity_audit import record_entity_event
 from app.core.lifecycle import record_lifecycle_event
 from app.core.security import StaffPrincipal, require_staff
 from app.db.session import get_db
@@ -52,6 +53,14 @@ def create_reservation(
     db_reservation = Reservation(**reservation_data)
     db.add(db_reservation)
     db.flush()
+    record_entity_event(
+        db,
+        actor=current_user,
+        action="CREATED",
+        entity_type="reservation",
+        entity_id=db_reservation.reservation_id,
+        notes="Created reservation.",
+    )
     record_lifecycle_event(
         db,
         reservation=db_reservation,
@@ -115,6 +124,15 @@ def update_reservation(
     if "location_id" in update_data and db_reservation.return_location_id is None:
         db_reservation.return_location_id = db_reservation.location_id
 
+    record_entity_event(
+        db,
+        actor=current_user,
+        action="UPDATED",
+        entity_type="reservation",
+        entity_id=reservation_id,
+        notes=f"Updated reservation fields: {', '.join(update_data.keys()) or 'none'}.",
+    )
+
     if requested_status in {"CANCELED", "NO_SHOW"} and requested_status != current_status:
         record_lifecycle_event(
             db,
@@ -130,7 +148,11 @@ def update_reservation(
 
 
 @router.delete("/{reservation_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_reservation(reservation_id: UUID, db: Session = Depends(get_db)):
+def delete_reservation(
+    reservation_id: UUID,
+    current_user: StaffPrincipal = Depends(require_staff),
+    db: Session = Depends(get_db),
+):
     """Delete a reservation"""
     db_reservation = db.query(Reservation).filter(Reservation.reservation_id == reservation_id).first()
     if not db_reservation:
@@ -147,6 +169,14 @@ def delete_reservation(reservation_id: UUID, db: Session = Depends(get_db)):
             detail="Reservation has a rental agreement and cannot be deleted",
         )
     
+    record_entity_event(
+        db,
+        actor=current_user,
+        action="DELETED",
+        entity_type="reservation",
+        entity_id=reservation_id,
+        notes="Deleted reservation.",
+    )
     db.delete(db_reservation)
     db.commit()
     return None

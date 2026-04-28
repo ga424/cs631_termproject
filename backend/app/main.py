@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.db.session import get_db
-from app.api import auth, customer_portal, locations, customers, car_classes, models, vehicles, reservations, rentals, dashboard
+from app.api import auth, customer_portal, locations, customers, car_classes, models, vehicles, reservations, rentals, dashboard, audit_events
 
 setup_logging(log_level=settings.log_level, use_json=settings.log_json)
 logger = logging.getLogger("app.main")
@@ -41,6 +41,7 @@ app.include_router(vehicles.router)
 app.include_router(reservations.router)
 app.include_router(rentals.router)
 app.include_router(dashboard.router)
+app.include_router(audit_events.router)
 
 
 @app.on_event("startup")
@@ -139,6 +140,7 @@ async def api_version():
             "dashboard_overview": "/api/v1/dashboard/overview",
             "auth_login": "/api/v1/auth/login",
             "customer_portal": "/api/v1/customer-portal",
+            "audit_events": "/api/v1/audit-events",
         }
     }
 
