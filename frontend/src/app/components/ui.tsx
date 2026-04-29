@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { formatCurrency, formatPercent } from "../lib/api";
 import type { WorkflowStage } from "../lib/types";
 
@@ -27,18 +28,32 @@ export function SectionCard({
 }
 
 export function AlertStrip({ error, success }: { error?: string; success?: string }) {
+  const [visibleNotifications, setVisibleNotifications] = useState<Set<string>>(new Set());
+
   const notifications = [
     ...(error ? [{ id: "error", tone: "error", title: "Action needed", message: error }] : []),
     ...(success ? [{ id: "success", tone: "success", title: "Update saved", message: success }] : []),
   ];
 
-  if (!notifications.length) {
+  useEffect(() => {
+    setVisibleNotifications(new Set(notifications.map((n) => n.id)));
+  }, [error, success]);
+
+  const handleClose = (id: string) => {
+    const updated = new Set(visibleNotifications);
+    updated.delete(id);
+    setVisibleNotifications(updated);
+  };
+
+  const visibleNotificationsList = notifications.filter((n) => visibleNotifications.has(n.id));
+
+  if (!visibleNotificationsList.length) {
     return null;
   }
 
   return (
     <div className="notification-stack" aria-live="polite">
-      {notifications.map((notification) => (
+      {visibleNotificationsList.map((notification) => (
         <div
           key={notification.id}
           className={`notification-banner ${notification.tone}`}
@@ -51,6 +66,14 @@ export function AlertStrip({ error, success }: { error?: string; success?: strin
             <strong>{notification.title}</strong>
             <p>{notification.message}</p>
           </div>
+          <button
+            type="button"
+            className="notification-close"
+            aria-label={`Close ${notification.tone} notification`}
+            onClick={() => handleClose(notification.id)}
+          >
+            ✕
+          </button>
         </div>
       ))}
     </div>

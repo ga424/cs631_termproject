@@ -439,7 +439,7 @@ select {
 }
 
 .app-shell {
-  padding: 14px 14px 92px;
+  padding: 74px 14px 92px;
 }
 
 .mobile-hero {
@@ -544,19 +544,28 @@ select {
 }
 
 .notification-stack {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
   display: grid;
   gap: 10px;
-  margin-bottom: 2px;
+  padding: 14px;
+  z-index: 1000;
+  background: transparent;
+  pointer-events: none;
 }
 
 .notification-banner {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;
   gap: 12px;
   align-items: start;
   padding: 13px 14px;
   border-radius: 16px;
   box-shadow: 0 14px 34px -28px rgba(19, 32, 51, 0.85);
+  pointer-events: auto;
 }
 
 .notification-banner strong,
@@ -591,6 +600,30 @@ select {
   background: #ecfdf5;
   color: #10634f;
   border: 1px solid #9ae6cf;
+}
+
+.notification-close {
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 1.2rem;
+  font-weight: 700;
+  opacity: 0.6;
+  transition: opacity 200ms ease;
+  align-self: start;
+  margin-top: 2px;
+}
+
+.notification-close:hover,
+.notification-close:focus {
+  opacity: 1;
+  outline: none;
 }
 
 .loading-strip,
